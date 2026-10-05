@@ -1,0 +1,56 @@
+options:
+  parameters:
+    id: snac_loopback
+    title: SNAC 24k WAV Loopback
+    generate_options: no_gui
+    output_language: python
+    run_options: run
+  states: {coordinate: [8, 8], rotation: 0, state: enabled}
+blocks:
+- name: wav_import
+  id: import
+  parameters: {imports: import wave}
+  states: {coordinate: [8, 100], rotation: 0, state: enabled}
+- name: input_path
+  id: variable
+  parameters: {value: "'input.wav'"}
+  states: {coordinate: [160, 8], rotation: 0, state: enabled}
+- name: output_path
+  id: variable
+  parameters: {value: "'reconstructed.wav'"}
+  states: {coordinate: [320, 8], rotation: 0, state: enabled}
+- name: sample_count
+  id: variable
+  parameters:
+    value: "wave.open(input_path, 'rb').getnframes()"
+  states: {coordinate: [480, 8], rotation: 0, state: enabled}
+- name: source
+  id: blocks_wavfile_source
+  parameters: {file: input_path, repeat: 'False', nchan: '1'}
+  states: {coordinate: [8, 240], rotation: 0, state: enabled}
+- name: encoder
+  id: snac_encoder
+  parameters: {model: hubertsiuzdak/snac_24khz, device: cpu, chunk_ms: '1000', verbose: 'True', total_samples: sample_count}
+  states: {coordinate: [240, 240], rotation: 0, state: enabled}
+- name: decoder
+  id: snac_decoder
+  parameters: {model: hubertsiuzdak/snac_24khz, device: cpu, verbose: 'True'}
+  states: {coordinate: [520, 240], rotation: 0, state: enabled}
+- name: sink
+  id: blocks_wavfile_sink
+  parameters:
+    file: output_path
+    nchan: '1'
+    samp_rate: '24000'
+    format: FORMAT_WAV
+    bits_per_sample1: FORMAT_PCM_16
+    bits_per_sample2: FORMAT_PCM_16
+    bits_per_sample3: FORMAT_VORBIS
+    bits_per_sample4: FORMAT_PCM_16
+    append: 'False'
+  states: {coordinate: [760, 240], rotation: 0, state: enabled}
+connections:
+- [source, '0', encoder, '0']
+- [encoder, codes, decoder, codes]
+- [decoder, '0', sink, '0']
+metadata: {file_format: 1, grc_version: 3.10.9.2}

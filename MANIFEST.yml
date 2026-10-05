@@ -1,0 +1,6 @@
+title: gr-snac
+version: '0.1.0'
+brief: Hierarchical SNAC 24 kHz speech codec blocks for GNU Radio 3.10
+tags: [audio, codec, python, snac]
+dependencies: [gnuradio, python3, numpy, torch, snac, scipy]
+description: Float audio streams to three separate token levels and back, via PMT messages.

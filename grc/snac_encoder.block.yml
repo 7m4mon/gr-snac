@@ -1,0 +1,33 @@
+id: snac_encoder
+label: SNAC Encoder 24k
+category: '[SNAC]'
+flags: [python]
+parameters:
+- {id: model, label: Model, dtype: string, default: hubertsiuzdak/snac_24khz}
+- id: device
+  label: Device
+  dtype: enum
+  options: [auto, cpu, cuda]
+  default: cpu
+- {id: chunk_ms, label: Chunk Duration (ms), dtype: real, default: '1000'}
+- id: verbose
+  label: Verbose
+  dtype: enum
+  options: ['False', 'True']
+  default: 'False'
+- {id: total_samples, label: Total Samples (0 = continuous), dtype: int, default: '0'}
+inputs:
+- {domain: stream, dtype: float}
+outputs:
+- {domain: message, id: codes, optional: true}
+templates:
+  imports: from gnuradio import snac
+  make: snac.snac_encoder(model=${model}, device='${device}', chunk_ms=${chunk_ms}, verbose=${verbose}, total_samples=${total_samples})
+asserts:
+- ${chunk_ms > 0}
+- ${total_samples >= 0}
+documentation: |-
+  Input is 24000 Hz mono float. Three separate u16vector token levels in each PMT dictionary.
+  Set Total Samples to the exact finite input length to emit its final partial chunk and EOS.
+  With zero, only full chunks are emitted; stopping discards the partial chunk.
+file_format: 1

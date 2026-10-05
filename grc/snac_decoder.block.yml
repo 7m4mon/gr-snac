@@ -1,0 +1,27 @@
+id: snac_decoder
+label: SNAC Decoder 24k
+category: '[SNAC]'
+flags: [python]
+parameters:
+- {id: model, label: Model, dtype: string, default: hubertsiuzdak/snac_24khz}
+- id: device
+  label: Device
+  dtype: enum
+  options: [auto, cpu, cuda]
+  default: cpu
+- id: verbose
+  label: Verbose
+  dtype: enum
+  options: ['False', 'True']
+  default: 'False'
+inputs:
+- {domain: message, id: codes}
+outputs:
+- {domain: stream, dtype: float}
+templates:
+  imports: from gnuradio import snac
+  make: snac.snac_decoder(model=${model}, device='${device}', verbose=${verbose})
+documentation: |-
+  Output is 24000 Hz mono float. Empty FIFO returns zero samples, without inserted silence.
+  EOS drains queued audio then completes the stream. Invalid messages log a fatal error.
+file_format: 1
