@@ -1,0 +1,732 @@
+options:
+  parameters:
+    author: 7M4MON
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: Standard GNU Radio CPM; edit variables and restart.
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: qt_gui
+    hier_block_src_path: '.:'
+    id: three_carriers
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: run
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: 'Gaussian 4CPFSK: three carriers'
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate:
+    - 8
+    - 8
+    rotation: 0
+    state: enabled
+blocks:
+- name: symbol_rate
+  id: variable
+  parameters:
+    value: '1312.5'
+  states:
+    coordinate:
+    - 16
+    - 16
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: samples_per_symbol
+  id: variable
+  parameters:
+    value: '32'
+  states:
+    coordinate:
+    - 256
+    - 16
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: sample_rate
+  id: variable
+  parameters:
+    value: symbol_rate * samples_per_symbol
+  states:
+    coordinate:
+    - 496
+    - 16
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: modulation_index_h
+  id: variable
+  parameters:
+    value: '0.25'
+  states:
+    coordinate:
+    - 736
+    - 16
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: gaussian_bt
+  id: variable
+  parameters:
+    value: '0.30'
+  states:
+    coordinate:
+    - 976
+    - 16
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: pulse_length
+  id: variable
+  parameters:
+    value: '4'
+  states:
+    coordinate:
+    - 16
+    - 106
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: channel_spacing
+  id: variable
+  parameters:
+    value: '2500'
+  states:
+    coordinate:
+    - 256
+    - 106
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: seed
+  id: variable
+  parameters:
+    value: '12345'
+  states:
+    coordinate:
+    - 496
+    - 106
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: random_symbols
+  id: variable
+  parameters:
+    value: '262144'
+  states:
+    coordinate:
+    - 736
+    - 106
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: duration_seconds
+  id: variable
+  parameters:
+    value: '60'
+  states:
+    coordinate:
+    - 976
+    - 106
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: iq_path
+  id: variable
+  parameters:
+    value: '''three_carriers.cf32'''
+  states:
+    coordinate:
+    - 16
+    - 196
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: numpy_import
+  id: import
+  parameters:
+    imports: import numpy as np
+  states:
+    coordinate:
+    - 16
+    - 280
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: window_size
+  id: snippet
+  parameters:
+    section: main_after_init
+    priority: '0'
+    code: self.resize(1200, 900)
+  states:
+    coordinate:
+    - 320
+    - 280
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: source_0
+  id: blocks_vector_source_x
+  parameters:
+    type: byte
+    vector: np.random.default_rng(seed + 0).integers(0, 4, random_symbols, dtype=np.uint8).tolist()
+    tags: '[]'
+    repeat: 'True'
+    vlen: '1'
+  states:
+    coordinate:
+    - 16
+    - 380
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: gray_0
+  id: digital_map_bb
+  parameters:
+    map: '[253, 255, 3, 1]'
+  states:
+    coordinate:
+    - 320
+    - 380
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: cpm_0
+  id: digital_cpmmod_bc
+  parameters:
+    type: analog.cpm.GAUSSIAN
+    mod_index: modulation_index_h
+    samples_per_symbol: samples_per_symbol
+    L: pulse_length
+    beta: gaussian_bt
+  states:
+    coordinate:
+    - 520
+    - 380
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: osc_0
+  id: analog_sig_source_x
+  parameters:
+    type: complex
+    samp_rate: sample_rate
+    waveform: analog.GR_COS_WAVE
+    freq: (0 - 1) * channel_spacing
+    amp: '1'
+    offset: '0'
+    phase: '0'
+  states:
+    coordinate:
+    - 520
+    - 470
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: shift_0
+  id: blocks_multiply_xx
+  parameters:
+    type: complex
+    num_inputs: '2'
+    vlen: '1'
+  states:
+    coordinate:
+    - 790
+    - 380
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: source_1
+  id: blocks_vector_source_x
+  parameters:
+    type: byte
+    vector: np.random.default_rng(seed + 1).integers(0, 4, random_symbols, dtype=np.uint8).tolist()
+    tags: '[]'
+    repeat: 'True'
+    vlen: '1'
+  states:
+    coordinate:
+    - 16
+    - 570
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: gray_1
+  id: digital_map_bb
+  parameters:
+    map: '[253, 255, 3, 1]'
+  states:
+    coordinate:
+    - 320
+    - 570
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: cpm_1
+  id: digital_cpmmod_bc
+  parameters:
+    type: analog.cpm.GAUSSIAN
+    mod_index: modulation_index_h
+    samples_per_symbol: samples_per_symbol
+    L: pulse_length
+    beta: gaussian_bt
+  states:
+    coordinate:
+    - 520
+    - 570
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: osc_1
+  id: analog_sig_source_x
+  parameters:
+    type: complex
+    samp_rate: sample_rate
+    waveform: analog.GR_COS_WAVE
+    freq: (1 - 1) * channel_spacing
+    amp: '1'
+    offset: '0'
+    phase: '0'
+  states:
+    coordinate:
+    - 520
+    - 660
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: shift_1
+  id: blocks_multiply_xx
+  parameters:
+    type: complex
+    num_inputs: '2'
+    vlen: '1'
+  states:
+    coordinate:
+    - 790
+    - 570
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: source_2
+  id: blocks_vector_source_x
+  parameters:
+    type: byte
+    vector: np.random.default_rng(seed + 2).integers(0, 4, random_symbols, dtype=np.uint8).tolist()
+    tags: '[]'
+    repeat: 'True'
+    vlen: '1'
+  states:
+    coordinate:
+    - 16
+    - 760
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: gray_2
+  id: digital_map_bb
+  parameters:
+    map: '[253, 255, 3, 1]'
+  states:
+    coordinate:
+    - 320
+    - 760
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: cpm_2
+  id: digital_cpmmod_bc
+  parameters:
+    type: analog.cpm.GAUSSIAN
+    mod_index: modulation_index_h
+    samples_per_symbol: samples_per_symbol
+    L: pulse_length
+    beta: gaussian_bt
+  states:
+    coordinate:
+    - 520
+    - 760
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: osc_2
+  id: analog_sig_source_x
+  parameters:
+    type: complex
+    samp_rate: sample_rate
+    waveform: analog.GR_COS_WAVE
+    freq: (2 - 1) * channel_spacing
+    amp: '1'
+    offset: '0'
+    phase: '0'
+  states:
+    coordinate:
+    - 520
+    - 850
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: shift_2
+  id: blocks_multiply_xx
+  parameters:
+    type: complex
+    num_inputs: '2'
+    vlen: '1'
+  states:
+    coordinate:
+    - 790
+    - 760
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: sum_carriers
+  id: blocks_add_xx
+  parameters:
+    type: complex
+    num_inputs: '3'
+    vlen: '1'
+  states:
+    coordinate:
+    - 1000
+    - 520
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: capture_length
+  id: blocks_head
+  parameters:
+    type: complex
+    num_items: int(duration_seconds * sample_rate)
+    vlen: '1'
+  states:
+    coordinate:
+    - 1220
+    - 380
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: throttle
+  id: blocks_throttle
+  parameters:
+    type: complex
+    samples_per_second: sample_rate
+    vlen: '1'
+    ignoretag: 'True'
+  states:
+    coordinate:
+    - 1440
+    - 380
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: frequency
+  id: qtgui_freq_sink_x
+  parameters:
+    type: complex
+    name: Spectrum (use mouse zoom for +/-5 kHz)
+    fftsize: '8192'
+    freqhalf: 'True'
+    wintype: window.WIN_BLACKMAN_hARRIS
+    norm_window: 'True'
+    fc: '0'
+    bw: sample_rate
+    grid: 'True'
+    autoscale: 'False'
+    average: '0.05'
+    ymin: '-140'
+    ymax: '10'
+    label: Relative Gain
+    units: dB
+    nconnections: '1'
+    update_time: '0.10'
+    gui_hint: 0,0,1,1
+    showports: 'False'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_level: '0.0'
+    tr_chan: '0'
+    tr_tag: '""'
+    ctrlpanel: 'False'
+    legend: 'True'
+    axislabels: 'True'
+    label1: ''
+    width1: '1'
+    color1: '"blue"'
+    alpha1: '1.0'
+    label2: ''''''
+    width2: '1'
+    color2: '"red"'
+    alpha2: '1.0'
+    label3: ''''''
+    width3: '1'
+    color3: '"green"'
+    alpha3: '1.0'
+    label4: ''''''
+    width4: '1'
+    color4: '"black"'
+    alpha4: '1.0'
+    label5: ''''''
+    width5: '1'
+    color5: '"cyan"'
+    alpha5: '1.0'
+    label6: ''''''
+    width6: '1'
+    color6: '"magenta"'
+    alpha6: '1.0'
+    label7: ''''''
+    width7: '1'
+    color7: '"yellow"'
+    alpha7: '1.0'
+    label8: ''''''
+    width8: '1'
+    color8: '"dark red"'
+    alpha8: '1.0'
+    label9: ''''''
+    width9: '1'
+    color9: '"dark green"'
+    alpha9: '1.0'
+    label10: ''''''
+    width10: '1'
+    color10: '"dark blue"'
+    alpha10: '1.0'
+  states:
+    coordinate:
+    - 1670
+    - 380
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: waterfall
+  id: qtgui_waterfall_sink_x
+  parameters:
+    type: complex
+    name: Gaussian 4CPFSK
+    fftsize: '8192'
+    freqhalf: 'True'
+    wintype: window.WIN_BLACKMAN_hARRIS
+    fc: '0'
+    bw: sample_rate
+    int_min: '-140'
+    int_max: '10'
+    grid: 'False'
+    nconnections: '1'
+    update_time: '0.10'
+    gui_hint: 1,0,1,1
+    showports: 'False'
+    legend: 'True'
+    label1: ''
+    axislabels: 'True'
+    color1: '0'
+    alpha1: '1.0'
+    label2: ''
+    color2: ''
+    alpha2: '1.0'
+    label3: ''
+    color3: ''
+    alpha3: '1.0'
+    label4: ''
+    color4: ''
+    alpha4: '1.0'
+    label5: ''
+    color5: ''
+    alpha5: '1.0'
+    label6: ''
+    color6: ''
+    alpha6: '1.0'
+    label7: ''
+    color7: ''
+    alpha7: '1.0'
+    label8: ''
+    color8: ''
+    alpha8: '1.0'
+    label9: ''
+    color9: ''
+    alpha9: '1.0'
+    label10: ''
+    color10: ''
+    alpha10: '1.0'
+  states:
+    coordinate:
+    - 1670
+    - 540
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: iq_file
+  id: blocks_file_sink
+  parameters:
+    file: iq_path
+    type: complex
+    vlen: '1'
+    unbuffered: 'False'
+    append: 'False'
+  states:
+    coordinate:
+    - 1670
+    - 700
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+connections:
+- - source_0
+  - '0'
+  - gray_0
+  - '0'
+- - gray_0
+  - '0'
+  - cpm_0
+  - '0'
+- - cpm_0
+  - '0'
+  - shift_0
+  - '0'
+- - osc_0
+  - '0'
+  - shift_0
+  - '1'
+- - source_1
+  - '0'
+  - gray_1
+  - '0'
+- - gray_1
+  - '0'
+  - cpm_1
+  - '0'
+- - cpm_1
+  - '0'
+  - shift_1
+  - '0'
+- - osc_1
+  - '0'
+  - shift_1
+  - '1'
+- - source_2
+  - '0'
+  - gray_2
+  - '0'
+- - gray_2
+  - '0'
+  - cpm_2
+  - '0'
+- - cpm_2
+  - '0'
+  - shift_2
+  - '0'
+- - osc_2
+  - '0'
+  - shift_2
+  - '1'
+- - shift_0
+  - '0'
+  - sum_carriers
+  - '0'
+- - shift_1
+  - '0'
+  - sum_carriers
+  - '1'
+- - shift_2
+  - '0'
+  - sum_carriers
+  - '2'
+- - sum_carriers
+  - '0'
+  - capture_length
+  - '0'
+- - capture_length
+  - '0'
+  - throttle
+  - '0'
+- - throttle
+  - '0'
+  - frequency
+  - '0'
+- - throttle
+  - '0'
+  - waterfall
+  - '0'
+- - throttle
+  - '0'
+  - iq_file
+  - '0'
+metadata:
+  file_format: 1

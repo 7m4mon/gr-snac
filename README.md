@@ -4,7 +4,7 @@ English | [日本語](README.ja.md)
 
 Author: **7M4MON**
 
-Date: **2026-10-06**
+Date: **2026-10-05**
 
 Python out-of-tree (OOT) blocks for GNU Radio 3.10 that encode 24 kHz mono
 float audio into SNAC tokens and decode them back to audio. All three token
@@ -12,8 +12,47 @@ levels remain separate in native PMT messages.
 
 Version 0.1 includes encoder and decoder blocks, GNU Radio Companion (GRC)
 definitions, WAV loopback examples, standalone token measurements, and tests.
-Radio framing, FEC, modulation, and SDR transmission are outside
-its scope.
+Radio framing, FEC, and SDR transmission are outside the codec OOT's scope.
+A separate Gaussian 4CPFSK GRC experiment now generates and measures transmit
+waveforms using stock GNU Radio blocks; it is not yet connected to the codec.
+
+## Radio frame proposal and waveform results (2026-10-06)
+
+The proposed frame starts with 84 payload bits (seven 12-bit tokens) per
+2048 audio samples, or 85.333… ms at 24 kHz. Adding 8 sequence/flag bits and
+12 CRC bits gives 104 information bits. Assuming rate-1/2 FEC with no additional
+termination bits gives 208 coded bits, or 104 four-level symbols. Adding a
+provisional 8-symbol sync gives **112 symbols/frame and 1312.5 symbols/s**.
+The 2625 bit/s gross equivalent includes sync; the coded data portion is
+2437.5 bit/s. CRC, FEC and sync insertion remain a design proposal, not implemented
+features of the current flowgraphs.
+
+The experiment uses standard Map and Gaussian CPM blocks rather than a custom
+modulator. Defaults are h=0.25, BT=0.30, pulse length L=4, 32 samples/symbol and
+42 ksample/s. Seeded random symbols stand in for coded data. Twelve h/BT settings
+were measured with 60-second records on GNU Radio 3.10.1.1 / Ubuntu 22.04 (WSL).
+Both generated Qt applications were smoke-tested offscreen, including IQ capture
+for single-carrier and three-carrier configurations at 2.0 and 2.5 kHz spacing.
+
+| Default-setting measurement | Result |
+|---|---:|
+| 99% occupied bandwidth | 1379.6 Hz |
+| 99.9% occupied bandwidth | 1829.6 Hz |
+| ACPR at 2.0 kHz spacing, lower / upper | -36.45 / -36.43 dB |
+| ACPR at 2.5 kHz spacing, lower / upper | -46.63 / -46.60 dB |
+
+ACPR uses rectangular integration bands as wide as the channel spacing. These
+results identify spectral candidates, not validated radio links: no pass/fail
+mask, BER, acquisition, frequency-error or RF tests have been applied. Actual
+framing may change the spectrum and required symbol rate. For example, six
+additional convolutional-code termination bits would require 118 symbols/frame,
+or 1382.8125 symbols/s. The provisional sync length also needs receiver testing.
+
+See the [Japanese design narrative](README.ja.md) and the
+[experiment README](examples/narrowband_4cpfsk/README.md) for measurement
+definitions, all twelve results and reproduction commands. Open the
+[single-carrier GRC](examples/narrowband_4cpfsk/narrowband_4cpfsk.grc) or
+[three-carrier GRC](examples/narrowband_4cpfsk/three_carriers.grc) to run the experiment.
 
 ## Installation on Linux
 
@@ -259,71 +298,9 @@ PyTorch 2.14.1+cpu, SNAC 1.2.1, NumPy 1.26.4, and SciPy 1.15.3:
 - The one-second chunk produced [12, 24, 48] tokens, equivalent to 1008 bit/s
   at 12 bits/token.
 
-CUDA operation and listening tests remain unverified.
-
-## 2026-10-06 update: boundary discontinuities and tests
-
-The previous independent one-second (24,000-sample) encode/decode calls lost
-context at each join, exposing padding and convolution edge effects. The
-current blocks process 2,048-sample frames with past and future context and
-retain only the central output frame. The encoder keeps PCM history and the
-decoder keeps received tokens. `context_frames` accepts 1 or 2, defaulting to 2.
-Only 1/2/4 new tokens cross the message boundary per frame: 84 bits and a steady
-984.375 bit/s, without retransmitting context. Final padding is cropped to the
-original sample count, and EOS flushes pending frames.
-
-### Recorded audio comparisons and scheduler verification
-
-The test audio was taken from the **JVS (Japanese versatile speech) corpus**.
-These results were recorded on another PC; they were not remeasured here.
-
-- The earlier 500 ms context prototype reduced adjacent-sample differences at
-  the 001 recording's 3-second boundary from 0.055756 to 0.001910 and its
-  5-second boundary from 0.068390 to 0.000853. The 002 recording's 2-second
-  boundary decreased from 0.038910 to 0.000195. These measurements predate the
-  current frame implementation; see the [boundary investigation](examples/boundary_analysis/README.md).
-- With two frames of context on each side, the offline comparison matched
-  whole-file encoding tokens at all three levels for both 001 and 002 (100%).
-  Waveform RMSE against whole-file decoding was 0.001358 and 0.001011,
-  respectively. See the [comparison data](examples/frame_context/comparison.json)
-  and [experiment conditions](examples/frame_context/README.md).
-- The updated GRC-generated flowgraph ran with the real GNU Radio scheduler.
-  Recording 001 retained 206,905 samples in 102 frames / 714 tokens. Its v2
-  file occupied 1,214 bytes: 1,071 payload bytes and 143 overhead bytes.
-  Decoding the saved tokens alone retained all 206,905 samples and terminated
-  at EOS. See the [scheduler verification](examples/frame_stream_check/README.md).
-
-Boundary differences and token agreement do not establish perceptual quality.
-The model's NoiseBlock uses randomness during inference, so identical tokens
-need not produce identical waveforms. Complete click removal, the same results
-on other recordings, and real-time radio operation remain unverified. Parameter
-names and transmission sizes in the older 500 ms reports describe that prototype.
-
-### Added and updated test coverage
-
-- `tests/test_context.py`: irregular input sizes, short tails, future-context
-  waiting, exact sample retention, and bounded context buffers.
-- `tests/test_blocks.py`: all encoder/decoder context 1/2 combinations,
-  sample-exact output timelines, 1/2/4 transmitted tokens, parameter validation,
-  missing-frame rejection, EOS/FIFO draining, and forwarding after token storage.
-- `tests/test_token_file.py`: all 12-bit values, odd token counts and known bit
-  patterns, v2 packing across frame boundaries, partial tails, v1 reading,
-  truncated-file rejection, and incomplete manual stops.
-- Real-model QA now contains three tests, including real scheduler recording,
-  decoding, and automatic termination with both context settings. The
-  25,003-sample fixture checks 13 frames / 91 tokens and the original output length.
-
-Use the commands in Tests above for unit and real-model QA. With the model and
-input WAVs available in WSL, reproduce the audio comparison with:
-
-```sh
-OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 HF_HUB_OFFLINE=1 python tools/compare_frame_context.py
-```
-
-Use `HF_HUB_OFFLINE=1` only with cached model weights. During this README update,
-`python -m unittest discover -s tests -v` stopped while importing all four test
-modules because this Windows Python environment lacks NumPy. The current suite's
-pass count and a rerun of all three real-model QA tests remain unverified.
+Listening tests were performed by the author. Audible discontinuities at the
+joins motivated the addition of past and future frame context to the current
+encoder and decoder. CUDA operation remains unverified.
 
 ## References
 
