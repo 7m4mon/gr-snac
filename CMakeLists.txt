@@ -25,7 +25,7 @@ install(DIRECTORY python/gnuradio/snac/ DESTINATION ${GR_PYTHON_DIR}/gnuradio/sn
         FILES_MATCHING PATTERN "*.py" PATTERN "qa_snac.py" EXCLUDE PATTERN "__pycache__" EXCLUDE)
 install(DIRECTORY python/gr_snac_core/ DESTINATION ${GR_PYTHON_DIR}/gr_snac_core
         FILES_MATCHING PATTERN "*.py" PATTERN "__pycache__" EXCLUDE)
-install(FILES grc/snac_encoder.block.yml grc/snac_decoder.block.yml
+install(FILES grc/snac_encoder.block.yml grc/snac_decoder.block.yml grc/snac_token_file.block.yml
         DESTINATION share/gnuradio/grc/blocks)
 install(DIRECTORY examples/ DESTINATION share/gr-snac/examples
         FILES_MATCHING PATTERN "*.py" PATTERN "*.grc" PATTERN "__pycache__" EXCLUDE)

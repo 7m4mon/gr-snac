@@ -2,6 +2,7 @@
 import math
 import pmt
 from gr_snac_core.codec import RATE, validate_levels
+from gr_snac_core.frames import FRAME_MODE, validate_frame
 
 
 def pack(metadata, levels=None):
@@ -27,11 +28,18 @@ def unpack(message, model):
     index = meta.get("chunk_index")
     if type(index) is not int or index < 0:
         raise ValueError("invalid chunk_index")
+    if meta.get("stream_mode") not in (None, FRAME_MODE):
+        raise ValueError("unsupported stream_mode")
     if meta.get("eos") is True:
         return meta, None
     samples = meta.get("audio_samples")
     if type(samples) is not int or samples <= 0:
         raise ValueError("invalid audio_samples")
+    encoded = meta.get("encoded_samples", samples)
+    crop = meta.get("crop_start", 0)
+    if (type(encoded) is not int or type(crop) is not int
+            or crop < 0 or encoded < crop + samples):
+        raise ValueError("invalid encoded_samples/crop_start")
     duration = meta.get("chunk_duration_ms")
     if (type(duration) not in (int, float) or not math.isfinite(duration)
             or abs(duration - samples / RATE * 1000) > 1e-6):
@@ -42,4 +50,7 @@ def unpack(message, model):
         if not pmt.is_u16vector(level):
             raise ValueError(f"level{i} must be u16vector")
         levels.append(pmt.u16vector_elements(level))
-    return meta, validate_levels(levels)
+    levels = validate_levels(levels)
+    if meta.get("stream_mode") == FRAME_MODE:
+        validate_frame(meta, levels)
+    return meta, levels

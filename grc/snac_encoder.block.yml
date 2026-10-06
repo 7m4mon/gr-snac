@@ -9,7 +9,12 @@ parameters:
   dtype: enum
   options: [auto, cpu, cuda]
   default: cpu
-- {id: chunk_ms, label: Chunk Duration (ms), dtype: real, default: '1000'}
+- id: context_frames
+  label: Context Frames (each side)
+  dtype: enum
+  options: ['1', '2']
+  option_labels: ['1 (85.3 ms)', '2 (170.7 ms)']
+  default: '2'
 - id: verbose
   label: Verbose
   dtype: enum
@@ -22,12 +27,14 @@ outputs:
 - {domain: message, id: codes, optional: true}
 templates:
   imports: from gnuradio import snac
-  make: snac.snac_encoder(model=${model}, device='${device}', chunk_ms=${chunk_ms}, verbose=${verbose}, total_samples=${total_samples})
+  make: snac.snac_encoder(model=${model}, device='${device}', verbose=${verbose}, total_samples=${total_samples}, context_frames=${context_frames})
 asserts:
-- ${chunk_ms > 0}
 - ${total_samples >= 0}
 documentation: |-
   Input is 24000 Hz mono float. Three separate u16vector token levels in each PMT dictionary.
   Set Total Samples to the exact finite input length to emit its final partial chunk and EOS.
-  With zero, only full chunks are emitted; stopping discards the partial chunk.
+  Fixed 2048-sample frames. Each message carries only 1/2/4 new tokens (84 bits).
+  Context is retained locally, not retransmitted. Steady payload rate: 984.375 bit/s.
+  One or two context frames on each side; future frames add look-ahead latency.
+  Total Samples = 0 is continuous mode; stopping discards pending input and look-ahead.
 file_format: 1

@@ -1,0 +1,207 @@
+/home/ubuntu/.venvs/gr-snac/lib/python3.10/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+SNAC ENC frame=0 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.371901s
+SNAC ENC frame=1 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.166127s
+SNAC ENC frame=2 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.196278s
+SNAC ENC frame=3 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.281955s
+SNAC DEC frame=0 samples=2048 context=2 inference=0.509703s
+SNAC ENC frame=4 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.400626s
+SNAC ENC frame=5 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.365795s
+SNAC DEC frame=1 samples=2048 context=2 inference=0.806107s
+SNAC ENC frame=6 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.382834s
+SNAC ENC frame=7 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.268850s
+SNAC DEC frame=2 samples=2048 context=2 inference=0.670341s
+SNAC ENC frame=8 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.339051s
+SNAC ENC frame=9 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.388939s
+SNAC DEC frame=3 samples=2048 context=2 inference=0.606419s
+SNAC ENC frame=10 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.275801s
+SNAC ENC frame=11 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.367997s
+SNAC DEC frame=4 samples=2048 context=2 inference=0.691176s
+SNAC ENC frame=12 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.290330s
+SNAC ENC frame=13 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.453448s
+SNAC DEC frame=5 samples=2048 context=2 inference=0.678890s
+SNAC ENC frame=14 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.352187s
+SNAC DEC frame=6 samples=2048 context=2 inference=0.514569s
+SNAC ENC frame=15 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.311084s
+SNAC ENC frame=16 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.508273s
+SNAC DEC frame=7 samples=2048 context=2 inference=0.790187s
+SNAC ENC frame=17 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.486363s
+SNAC DEC frame=8 samples=2048 context=2 inference=0.779511s
+SNAC ENC frame=18 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.499377s
+SNAC ENC frame=19 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.431574s
+SNAC DEC frame=9 samples=2048 context=2 inference=0.722180s
+SNAC ENC frame=20 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.365826s
+SNAC ENC frame=21 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.370829s
+SNAC DEC frame=10 samples=2048 context=2 inference=0.701315s
+SNAC ENC frame=22 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.338643s
+SNAC ENC frame=23 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.291792s
+SNAC DEC frame=11 samples=2048 context=2 inference=0.430729s
+SNAC ENC frame=24 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.325902s
+SNAC DEC frame=12 samples=2048 context=2 inference=0.530775s
+SNAC ENC frame=25 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.298603s
+SNAC ENC frame=26 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.406285s
+SNAC DEC frame=13 samples=2048 context=2 inference=0.619892s
+SNAC ENC frame=27 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.403528s
+SNAC DEC frame=14 samples=2048 context=2 inference=0.506068s
+SNAC ENC frame=28 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.274239s
+SNAC ENC frame=29 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.216738s
+SNAC DEC frame=15 samples=2048 context=2 inference=0.441019s
+SNAC ENC frame=30 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.341330s
+SNAC ENC frame=31 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.310582s
+SNAC DEC frame=16 samples=2048 context=2 inference=0.534654s
+SNAC ENC frame=32 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.291256s
+SNAC DEC frame=17 samples=2048 context=2 inference=0.639427s
+SNAC ENC frame=33 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.422300s
+SNAC ENC frame=34 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.237326s
+SNAC DEC frame=18 samples=2048 context=2 inference=0.424293s
+SNAC ENC frame=35 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.341487s
+SNAC ENC frame=36 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.584040s
+SNAC DEC frame=19 samples=2048 context=2 inference=0.877838s
+SNAC ENC frame=37 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.648881s
+SNAC DEC frame=20 samples=2048 context=2 inference=0.995108s
+SNAC ENC frame=38 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.534216s
+SNAC ENC frame=39 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.560373s
+SNAC DEC frame=21 samples=2048 context=2 inference=0.908751s
+SNAC ENC frame=40 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.558355s
+SNAC DEC frame=22 samples=2048 context=2 inference=0.838653s
+SNAC ENC frame=41 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.563650s
+SNAC ENC frame=42 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.483140s
+SNAC DEC frame=23 samples=2048 context=2 inference=0.799746s
+SNAC ENC frame=43 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.532327s
+SNAC ENC frame=44 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.539603s
+SNAC DEC frame=24 samples=2048 context=2 inference=1.014094s
+SNAC ENC frame=45 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.557409s
+SNAC ENC frame=46 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.509044s
+SNAC DEC frame=25 samples=2048 context=2 inference=0.877918s
+SNAC ENC frame=47 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.497025s
+SNAC DEC frame=26 samples=2048 context=2 inference=0.848874s
+SNAC ENC frame=48 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.540206s
+SNAC ENC frame=49 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.543228s
+SNAC DEC frame=27 samples=2048 context=2 inference=0.896450s
+SNAC ENC frame=50 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.576661s
+SNAC ENC frame=51 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.513968s
+SNAC DEC frame=28 samples=2048 context=2 inference=1.290419s
+SNAC ENC frame=52 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.529636s
+SNAC ENC frame=53 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.440965s
+SNAC DEC frame=29 samples=2048 context=2 inference=0.880104s
+SNAC ENC frame=54 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.356755s
+SNAC ENC frame=55 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.299827s
+SNAC DEC frame=30 samples=2048 context=2 inference=0.585199s
+SNAC ENC frame=56 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.293075s
+SNAC ENC frame=57 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.310227s
+SNAC DEC frame=31 samples=2048 context=2 inference=0.784849s
+SNAC ENC frame=58 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.371726s
+SNAC ENC frame=59 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.266949s
+SNAC DEC frame=32 samples=2048 context=2 inference=0.496901s
+SNAC ENC frame=60 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.370730s
+SNAC ENC frame=61 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.297374s
+SNAC DEC frame=33 samples=2048 context=2 inference=0.590540s
+SNAC ENC frame=62 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.243853s
+SNAC ENC frame=63 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.381548s
+SNAC DEC frame=34 samples=2048 context=2 inference=0.746535s
+SNAC ENC frame=64 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.357278s
+SNAC ENC frame=65 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.382270s
+SNAC ENC frame=66 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.452517s
+SNAC DEC frame=35 samples=2048 context=2 inference=1.300335s
+SNAC ENC frame=67 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.351812s
+SNAC ENC frame=68 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.267241s
+SNAC ENC frame=69 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.336234s
+SNAC DEC frame=36 samples=2048 context=2 inference=0.832794s
+SNAC ENC frame=70 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.344618s
+SNAC ENC frame=71 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.285796s
+SNAC DEC frame=37 samples=2048 context=2 inference=0.807121s
+SNAC ENC frame=72 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.409890s
+SNAC ENC frame=73 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.322930s
+SNAC ENC frame=74 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.326280s
+SNAC DEC frame=38 samples=2048 context=2 inference=1.010696s
+SNAC ENC frame=75 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.456408s
+SNAC ENC frame=76 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.401029s
+SNAC ENC frame=77 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.338851s
+SNAC DEC frame=39 samples=2048 context=2 inference=1.169545s
+SNAC ENC frame=78 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.336671s
+SNAC ENC frame=79 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.296128s
+SNAC DEC frame=40 samples=2048 context=2 inference=0.793241s
+SNAC ENC frame=80 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.388575s
+SNAC ENC frame=81 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.257485s
+SNAC DEC frame=41 samples=2048 context=2 inference=0.623243s
+SNAC ENC frame=82 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.344447s
+SNAC ENC frame=83 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.352576s
+SNAC DEC frame=42 samples=2048 context=2 inference=0.752501s
+SNAC ENC frame=84 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.315040s
+SNAC ENC frame=85 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.208783s
+SNAC DEC frame=43 samples=2048 context=2 inference=0.435443s
+SNAC ENC frame=86 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.255402s
+SNAC ENC frame=87 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.240853s
+SNAC DEC frame=44 samples=2048 context=2 inference=0.476932s
+SNAC ENC frame=88 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.245849s
+SNAC ENC frame=89 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.272981s
+SNAC DEC frame=45 samples=2048 context=2 inference=0.408207s
+SNAC ENC frame=90 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.233580s
+SNAC DEC frame=46 samples=2048 context=2 inference=0.367271s
+SNAC ENC frame=91 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.215689s
+SNAC ENC frame=92 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.331031s
+SNAC DEC frame=47 samples=2048 context=2 inference=0.518924s
+SNAC ENC frame=93 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.287214s
+SNAC DEC frame=48 samples=2048 context=2 inference=0.378379s
+SNAC ENC frame=94 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.254003s
+SNAC ENC frame=95 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.256481s
+SNAC DEC frame=49 samples=2048 context=2 inference=0.415578s
+SNAC ENC frame=96 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.228788s
+SNAC DEC frame=50 samples=2048 context=2 inference=0.388857s
+SNAC ENC frame=97 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.264374s
+SNAC ENC frame=98 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.186455s
+SNAC DEC frame=51 samples=2048 context=2 inference=0.342941s
+SNAC ENC frame=99 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.228279s
+SNAC ENC frame=100 samples=2048 tokens=[1,2,4] bits=84 context=2 inference=0.207469s
+SNAC DEC frame=52 samples=2048 context=2 inference=0.354330s
+SNAC ENC frame=101 samples=57 tokens=[1,2,4] bits=84 context=2 inference=0.167625s
+SNAC FILE encoded.snac: 8.621s, 1214 bytes, tokens=993.8 bit/s, file=1126.5 bit/s
+SNAC DEC frame=53 samples=2048 context=2 inference=0.316625s
+SNAC DEC frame=54 samples=2048 context=2 inference=0.250795s
+SNAC DEC frame=55 samples=2048 context=2 inference=0.303170s
+SNAC DEC frame=56 samples=2048 context=2 inference=0.282557s
+SNAC DEC frame=57 samples=2048 context=2 inference=0.355235s
+SNAC DEC frame=58 samples=2048 context=2 inference=0.536993s
+SNAC DEC frame=59 samples=2048 context=2 inference=0.461719s
+SNAC DEC frame=60 samples=2048 context=2 inference=0.485333s
+SNAC DEC frame=61 samples=2048 context=2 inference=0.255278s
+SNAC DEC frame=62 samples=2048 context=2 inference=0.244644s
+SNAC DEC frame=63 samples=2048 context=2 inference=0.244549s
+SNAC DEC frame=64 samples=2048 context=2 inference=0.191891s
+SNAC DEC frame=65 samples=2048 context=2 inference=0.196801s
+SNAC DEC frame=66 samples=2048 context=2 inference=0.239126s
+SNAC DEC frame=67 samples=2048 context=2 inference=0.243034s
+SNAC DEC frame=68 samples=2048 context=2 inference=0.249645s
+SNAC DEC frame=69 samples=2048 context=2 inference=0.254178s
+SNAC DEC frame=70 samples=2048 context=2 inference=0.232070s
+SNAC DEC frame=71 samples=2048 context=2 inference=0.269960s
+SNAC DEC frame=72 samples=2048 context=2 inference=0.252138s
+SNAC DEC frame=73 samples=2048 context=2 inference=0.211506s
+SNAC DEC frame=74 samples=2048 context=2 inference=0.183112s
+SNAC DEC frame=75 samples=2048 context=2 inference=0.256828s
+SNAC DEC frame=76 samples=2048 context=2 inference=0.257958s
+SNAC DEC frame=77 samples=2048 context=2 inference=0.246491s
+SNAC DEC frame=78 samples=2048 context=2 inference=0.238694s
+SNAC DEC frame=79 samples=2048 context=2 inference=0.254975s
+SNAC DEC frame=80 samples=2048 context=2 inference=0.271559s
+SNAC DEC frame=81 samples=2048 context=2 inference=0.226529s
+SNAC DEC frame=82 samples=2048 context=2 inference=0.354258s
+SNAC DEC frame=83 samples=2048 context=2 inference=0.675794s
+SNAC DEC frame=84 samples=2048 context=2 inference=0.286295s
+SNAC DEC frame=85 samples=2048 context=2 inference=0.295410s
+SNAC DEC frame=86 samples=2048 context=2 inference=0.360992s
+SNAC DEC frame=87 samples=2048 context=2 inference=0.386527s
+SNAC DEC frame=88 samples=2048 context=2 inference=0.351815s
+SNAC DEC frame=89 samples=2048 context=2 inference=0.210582s
+SNAC DEC frame=90 samples=2048 context=2 inference=0.181430s
+SNAC DEC frame=91 samples=2048 context=2 inference=0.282110s
+SNAC DEC frame=92 samples=2048 context=2 inference=0.241824s
+SNAC DEC frame=93 samples=2048 context=2 inference=0.245825s
+SNAC DEC frame=94 samples=2048 context=2 inference=0.222771s
+SNAC DEC frame=95 samples=2048 context=2 inference=0.228276s
+SNAC DEC frame=96 samples=2048 context=2 inference=0.238209s
+SNAC DEC frame=97 samples=2048 context=2 inference=0.218191s
+SNAC DEC frame=98 samples=2048 context=2 inference=0.206407s
+SNAC DEC frame=99 samples=2048 context=2 inference=0.190147s
+SNAC DEC frame=100 samples=2048 context=2 inference=0.197522s
+SNAC DEC frame=101 samples=57 context=2 inference=0.180519s

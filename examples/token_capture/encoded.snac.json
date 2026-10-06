@@ -1,0 +1,15 @@
+{
+  "format": "gr-snac-12-v1",
+  "model": "hubertsiuzdak/snac_24khz",
+  "complete": true,
+  "audio_samples": 206905,
+  "duration_seconds": 8.621041666666667,
+  "chunks": 9,
+  "tokens": 1428,
+  "token_bits": 17136,
+  "payload_bytes": 2144,
+  "file_bytes": 2468,
+  "overhead_bytes": 324,
+  "token_bitrate_bps": 1987.6948357942051,
+  "file_bitrate_bps": 2290.2104830719413
+}

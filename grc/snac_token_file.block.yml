@@ -1,0 +1,22 @@
+id: snac_token_file
+label: SNAC Token File (12-bit)
+category: '[SNAC]'
+flags: [python]
+parameters:
+- {id: filename, label: File, dtype: file_save, default: 'encoded.snac'}
+- {id: model, label: Model, dtype: string, default: hubertsiuzdak/snac_24khz}
+inputs:
+- {domain: message, id: codes}
+outputs:
+- {domain: message, id: codes, optional: true}
+templates:
+  imports: from gnuradio import snac
+  make: snac.snac_token_file(filename=${filename}, model=${model})
+documentation: |-
+  Saves the new frame tokens, packed continuously into 12 bits each (84 bits/frame).
+  No context is retransmitted and there is no per-frame byte padding or header in v2.
+  Custom gr-snac container (.snac), not WAV or an upstream standard format.
+  Overwrites File; writes File.json with payload and whole-file bitrates at EOS.
+  Wire between Encoder and Decoder to finish saving before decoder EOS.
+  Manual stop marks the recording incomplete. Model weights are not included.
+file_format: 1

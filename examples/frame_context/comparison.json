@@ -1,0 +1,104 @@
+{
+  "VOICEACTRESS100_001_001": {
+    "whole_boundary_jump_p95": 0.034731850028038025,
+    "past1_future0": {
+      "tokens": 714,
+      "bits_per_frame": 84,
+      "steady_bitrate": 984.375,
+      "encoder_token_agreement": [
+        0.5,
+        0.30392156862745096,
+        0.2181372549019608
+      ],
+      "boundary_jump_p95": 0.17092151939868927,
+      "rmse_to_whole": 0.03931935876607895
+    },
+    "past0_future1": {
+      "tokens": 714,
+      "bits_per_frame": 84,
+      "steady_bitrate": 984.375,
+      "encoder_token_agreement": [
+        0.5980392156862745,
+        0.3480392156862745,
+        0.25735294117647056
+      ],
+      "boundary_jump_p95": 0.16094323992729187,
+      "rmse_to_whole": 0.040074918419122696
+    },
+    "past1_future1": {
+      "tokens": 714,
+      "bits_per_frame": 84,
+      "steady_bitrate": 984.375,
+      "encoder_token_agreement": [
+        0.8529411764705882,
+        0.8137254901960784,
+        0.7843137254901961
+      ],
+      "boundary_jump_p95": 0.027352318167686462,
+      "rmse_to_whole": 0.01406095176935196
+    },
+    "past2_future2": {
+      "tokens": 714,
+      "bits_per_frame": 84,
+      "steady_bitrate": 984.375,
+      "encoder_token_agreement": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "boundary_jump_p95": 0.035452231764793396,
+      "rmse_to_whole": 0.0013575454941019416
+    }
+  },
+  "VOICEACTRESS100_001_002": {
+    "whole_boundary_jump_p95": 0.016806347295641916,
+    "past1_future0": {
+      "tokens": 616,
+      "bits_per_frame": 84,
+      "steady_bitrate": 984.375,
+      "encoder_token_agreement": [
+        0.625,
+        0.32954545454545453,
+        0.23863636363636365
+      ],
+      "boundary_jump_p95": 0.11697088927030566,
+      "rmse_to_whole": 0.03283464536070824
+    },
+    "past0_future1": {
+      "tokens": 616,
+      "bits_per_frame": 84,
+      "steady_bitrate": 984.375,
+      "encoder_token_agreement": [
+        0.5568181818181818,
+        0.3181818181818182,
+        0.21022727272727273
+      ],
+      "boundary_jump_p95": 0.0947475902736187,
+      "rmse_to_whole": 0.029004709795117378
+    },
+    "past1_future1": {
+      "tokens": 616,
+      "bits_per_frame": 84,
+      "steady_bitrate": 984.375,
+      "encoder_token_agreement": [
+        0.9431818181818182,
+        0.8522727272727273,
+        0.7698863636363636
+      ],
+      "boundary_jump_p95": 0.02057971060276032,
+      "rmse_to_whole": 0.01235800888389349
+    },
+    "past2_future2": {
+      "tokens": 616,
+      "bits_per_frame": 84,
+      "steady_bitrate": 984.375,
+      "encoder_token_agreement": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "boundary_jump_p95": 0.016949977725744258,
+      "rmse_to_whole": 0.0010109287686645985
+    }
+  }
+}

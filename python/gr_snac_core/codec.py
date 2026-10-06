@@ -60,6 +60,8 @@ class Codec:
         if (self.model.sampling_rate != RATE or self.model.n_codebooks != 3
                 or self.model.codebook_size != 4096):
             raise ValueError("model must be 24 kHz, three levels, 4096 entries")
+        self.alignment = int(self.model.hop_length) * math.lcm(
+            *self.model.vq_strides, self.model.attn_window_size or 1)
 
     def _sync(self):
         if self.device == "cuda":

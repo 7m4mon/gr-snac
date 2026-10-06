@@ -14,14 +14,22 @@ parameters:
   dtype: enum
   options: ['False', 'True']
   default: 'False'
+- id: context_frames
+  label: Context Frames (each side)
+  dtype: enum
+  options: ['1', '2']
+  option_labels: ['1 (85.3 ms)', '2 (170.7 ms)']
+  default: '2'
 inputs:
 - {domain: message, id: codes}
 outputs:
 - {domain: stream, dtype: float}
 templates:
   imports: from gnuradio import snac
-  make: snac.snac_decoder(model=${model}, device='${device}', verbose=${verbose})
+  make: snac.snac_decoder(model=${model}, device='${device}', verbose=${verbose}, context_frames=${context_frames})
 documentation: |-
   Output is 24000 Hz mono float. Empty FIFO returns zero samples, without inserted silence.
   EOS drains queued audio then completes the stream. Invalid messages log a fatal error.
+  Retains received tokens and waits for 1 or 2 future frames before decoding.
+  Missing/reordered frames terminate with an error; radio packet-loss concealment is not implemented.
 file_format: 1

@@ -6,14 +6,19 @@ import pmt
 from gnuradio import gr
 from gr_snac_core.codec import Codec, MODEL, RATE, statistics
 from .messages import unpack
+from gr_snac_core.frames import FrameDecoder, FRAME_MODE, context_frames as check_context
 
 LOG = logging.getLogger(__name__)
 
 
 class snac_decoder(gr.sync_block):
-    def __init__(self, model=MODEL, device="auto", verbose=False):
+    def __init__(self, model=MODEL, device="auto", verbose=False, context_frames=2):
         gr.sync_block.__init__(self, name="SNAC Decoder 24k", in_sig=None, out_sig=[np.float32])
+        check_context(context_frames)
         self.codec = Codec(model, device)
+        self.frames = FrameDecoder(self.codec, context_frames)
+        self.mode = None
+        self.expected = 0
         self.verbose = verbose
         self.fifo = deque()
         self.lock = threading.Lock()
@@ -29,11 +34,27 @@ class snac_decoder(gr.sync_block):
             if self.ended:
                 raise ValueError("received codes after EOS")
             meta, levels = unpack(message, self.codec.model_id)
+            mode = meta.get("stream_mode", "legacy")
+            if self.mode is not None and mode != self.mode:
+                raise ValueError("stream mode changed midstream")
+            self.mode = mode
+            if meta["chunk_index"] != self.expected:
+                raise ValueError("missing or reordered SNAC message")
             if levels is None:
+                if mode == FRAME_MODE:
+                    for audio, elapsed, index in self.frames.finish():
+                        self._queue(audio, elapsed, index)
                 with self.lock:
                     self.ended = True
                 return
-            audio, elapsed = self.codec.decode(levels, meta["audio_samples"])
+            self.expected += 1
+            if mode == FRAME_MODE:
+                for audio, elapsed, index in self.frames.push(meta, levels):
+                    self._queue(audio, elapsed, index)
+                return
+            audio, elapsed = self.codec.decode(levels, meta.get("encoded_samples", meta["audio_samples"]))
+            crop = meta.get("crop_start", 0)
+            audio = audio[crop:crop + meta["audio_samples"]].copy()
             with self.lock:
                 self.fifo.append(audio)
             if self.verbose:
@@ -46,6 +67,13 @@ class snac_decoder(gr.sync_block):
             with self.lock:
                 self.error = exc
                 self.ended = True
+
+    def _queue(self, audio, elapsed, index):
+        with self.lock:
+            self.fifo.append(audio)
+        if self.verbose:
+            LOG.warning("SNAC DEC frame=%d samples=%d context=%d inference=%.6fs",
+                        index, len(audio), self.frames.context, elapsed)
 
     def work(self, input_items, output_items):
         output = output_items[0]
