@@ -12,9 +12,33 @@ levels remain separate in native PMT messages.
 
 Version 0.1 includes encoder and decoder blocks, GNU Radio Companion (GRC)
 definitions, WAV loopback examples, standalone token measurements, and tests.
-Radio framing, FEC, and SDR transmission are outside the codec OOT's scope.
-A separate Gaussian 4CPFSK GRC experiment now generates and measures transmit
-waveforms using stock GNU Radio blocks; it is not yet connected to the codec.
+A separate Gaussian 4CPFSK GRC experiment now builds CRC/FEC/sync radio frames
+from random 84-bit payloads and measures transmit waveforms using stock GNU Radio
+blocks. A WAV-to-SNAC transmitter and a finite-file IQ-to-WAV receiver are connected
+to this chain. SDR transmission/reception is not implemented.
+As of 2026-10-07, the framed v2 examples also use stock matrix interleaving and
+additive whitening between FEC encoding and dibit conversion.
+
+The [WAV transmitter GRC](examples/narrowband_4cpfsk/wav_snac_4cpfsk.grc) uses the
+existing SNAC Encoder with a standard repeating WAV source and a sample-count
+Head. `repeat_count` defaults to **5 total plays**. Input must be nonempty 24 kHz
+mono integer-PCM WAV. Repetitions are concatenated before SNAC; only the final
+partial frame is padded. A message-only adapter packs the 1/2/4 tokens into 84
+payload bits and feeds the stock PDU-to-stream/FEC/interleaver/whitener/CPM chain.
+No speaker or SDR output is enabled. Real-model tests cover a 1001-sample WAV
+played once and five times, plus the bundled speech WAV played five times
+(506 radio frames, 1813632 IQ samples). See the
+[example README](examples/narrowband_4cpfsk/README.md) for launch commands and
+metadata needed to identify the valid audio length in the final padded frame.
+
+The [receiver GRC](examples/narrowband_4cpfsk/receive_snac_4cpfsk.grc) reads the IQ
+and its `.frames.json` sidecar, uses stock quadrature demodulation, FIR equalization,
+dewhitening, deinterleaving and tail-biting FEC decoding, then checks CRC/sequence
+and sends recovered tokens to the existing SNAC Decoder. It saves 24 kHz mono
+PCM16 WAV without speaker playback. Custom code performs finite-capture sync
+acquisition and protocol/token conversion. This first receiver assumes no CFO or
+sample-clock mismatch and uses the sidecar for finite audio length; it is not a
+continuous over-the-air receiver. See the example README for tests and limitations.
 
 ## Radio frame proposal and waveform results (2026-10-06)
 
@@ -24,8 +48,8 @@ The proposed frame starts with 84 payload bits (seven 12-bit tokens) per
 termination bits gives 208 coded bits, or 104 four-level symbols. Adding a
 provisional 8-symbol sync gives **112 symbols/frame and 1312.5 symbols/s**.
 The 2625 bit/s gross equivalent includes sync; the coded data portion is
-2437.5 bit/s. CRC, FEC and sync insertion remain a design proposal, not implemented
-features of the current flowgraphs.
+2437.5 bit/s. The initial unframed spectrum experiment has now been extended
+with actual CRC, FEC and sync insertion in separate framed flowgraphs.
 
 The experiment uses standard Map and Gaussian CPM blocks rather than a custom
 modulator. Defaults are h=0.25, BT=0.30, pulse length L=4, 32 samples/symbol and
@@ -34,7 +58,7 @@ were measured with 60-second records on GNU Radio 3.10.1.1 / Ubuntu 22.04 (WSL).
 Both generated Qt applications were smoke-tested offscreen, including IQ capture
 for single-carrier and three-carrier configurations at 2.0 and 2.5 kHz spacing.
 
-| Default-setting measurement | Result |
+| Initial unframed default-setting measurement | Result |
 |---|---:|
 | 99% occupied bandwidth | 1379.6 Hz |
 | 99.9% occupied bandwidth | 1829.6 Hz |
@@ -44,15 +68,47 @@ for single-carrier and three-carrier configurations at 2.0 and 2.5 kHz spacing.
 ACPR uses rectangular integration bands as wide as the channel spacing. These
 results identify spectral candidates, not validated radio links: no pass/fail
 mask, BER, acquisition, frequency-error or RF tests have been applied. Actual
-framing may change the spectrum and required symbol rate. For example, six
-additional convolutional-code termination bits would require 118 symbols/frame,
-or 1382.8125 symbols/s. The provisional sync length also needs receiver testing.
+framing can change the spectrum and required symbol rate. Six additional
+convolutional-code termination bits would require 118 symbols/frame, or
+1382.8125 symbols/s; the implementation instead uses tail-biting to preserve
+112 symbols/frame. The provisional sync length still needs receiver testing.
+
+The implemented format is payload[84], sequence[6], flags[2], CRC-12/DECT[12],
+MSB first with no byte padding. CRC covers the preceding 92 bits. Stock GNU Radio
+K=7, rate-1/2 CC encoding uses polys=[109,79], CC_TAILBITING and no padding.
+Repack Bits converts 208 coded bits to 104 dibits; Stream Mux prepends the eight
+sync dibits [0,3,1,0,2,1,3,2] (0x349E). Python only assembles the information bits
+and bitwise CRC. CPM state is continuous across frames. A one-time zero-level
+drain at the end of the finite capture preserves the final Gaussian pulse tail.
+
+For 704 framed random-payload frames at h=.25, BT=.30, seed=12345:
+
+| Framed v1 measurement (before interleaving/whitening) | Result |
+|---|---:|
+| 99% occupied bandwidth | 1372.4 Hz |
+| 99.9% occupied bandwidth | 1835.5 Hz |
+| ACPR at 2.0 kHz spacing, lower / upper | -36.26 / -36.42 dB |
+| ACPR at 2.5 kHz spacing, lower / upper | -46.73 / -46.68 dB |
+
+Validation covers CRC check/residue, single-bit error detection, sequence wrap,
+stock FEC against an independent test oracle, sync positions, and generated GRC
+dibit/IQ captures including the final drain. These transmit-spectrum tests do not
+establish BER/acquisition performance; finite-file receiver tests are documented separately.
+
+Version 2 adds a stock 16-row by 13-column Matrix Interleaver and Additive
+Scrambler (mask=0x21, seed=0x1FF, GNU Radio len=8, one bit per byte, count=208).
+The nine-bit LFSR resets at each coded frame; sync is excluded. The frame stays
+112 symbols long. Inverse whitening and deinterleaving recover the exact FEC
+output, including across frame boundaries. These are experimental settings,
+not receiver-performance optimization. The data bits are not wire-compatible
+with v1; metadata identifies v2 but no on-air version field was added.
 
 See the [Japanese design narrative](README.ja.md) and the
 [experiment README](examples/narrowband_4cpfsk/README.md) for measurement
 definitions, all twelve results and reproduction commands. Open the
-[single-carrier GRC](examples/narrowband_4cpfsk/narrowband_4cpfsk.grc) or
-[three-carrier GRC](examples/narrowband_4cpfsk/three_carriers.grc) to run the experiment.
+[framed single-carrier GRC](examples/narrowband_4cpfsk/framed_4cpfsk.grc) or
+[framed three-carrier GRC](examples/narrowband_4cpfsk/three_carriers_framed.grc) to run
+the new experiment. The original unframed examples remain available for comparison.
 
 ## Installation on Linux
 

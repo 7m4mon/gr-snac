@@ -1,3 +1,10 @@
 *.cf32
+*.dibits
+*.dibits.carrier*
+*.frames.json
+*.audio.json
+*.sync.json
+*.rx.json
+received_snac.wav
 results*/
 __pycache__/

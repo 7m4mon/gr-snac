@@ -10,10 +10,11 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
-def analyze(iq, sample_rate=42000., nperseg=8192, discard_seconds=0.1):
-    if sample_rate <= 0 or nperseg < 8 or discard_seconds < 0:
+def analyze(iq, sample_rate=42000., nperseg=8192, discard_seconds=0.1, discard_tail_samples=0):
+    if sample_rate <= 0 or nperseg < 8 or discard_seconds < 0 or discard_tail_samples < 0:
         raise ValueError('Invalid sample rate, FFT length or discard duration')
-    x = np.asarray(iq)[int(discard_seconds * sample_rate):]
+    stop = len(iq)-discard_tail_samples
+    x = np.asarray(iq)[int(discard_seconds * sample_rate):max(0, stop)]
     if len(x) < 2*nperseg or not np.isfinite(x).all():
         raise ValueError('Need at least two FFT segments of finite IQ after startup discard')
     f, p = welch(x, fs=sample_rate, window='blackmanharris', nperseg=nperseg,
@@ -33,7 +34,7 @@ def analyze(iq, sample_rate=42000., nperseg=8192, discard_seconds=0.1):
         return float(10*np.log10(max(ratio, np.finfo(float).tiny)))
     peak_db = 10*np.log10(np.maximum(p/p.max(), np.finfo(float).tiny))
     result = dict(sample_rate_hz=sample_rate, nperseg=nperseg, fft_bin_hz=df,
-        discard_seconds=discard_seconds, analyzed_samples=len(x),
+        discard_seconds=discard_seconds, discard_tail_samples=discard_tail_samples, analyzed_samples=len(x),
         analyzed_seconds=len(x)/sample_rate, total_power=total,
         magnitude_min=float(np.abs(x).min()), magnitude_max=float(np.abs(x).max()))
     for percentage in [99, 99.9]:
@@ -77,12 +78,14 @@ def main():
     ap.add_argument('--sample-rate', type=float, default=42000.)
     ap.add_argument('--nperseg', type=int, default=8192)
     ap.add_argument('--discard-seconds', type=float, default=0.1)
+    ap.add_argument('--discard-tail-samples', type=int, default=0,
+                    help='Exclude a finite capture drain (framed default: 4*32=128)')
     ap.add_argument('--spacing', type=int, choices=[2000, 2500], default=2500)
     args = ap.parse_args()
     if args.iq.stat().st_size % 8:
         ap.error('File size must be a multiple of 8 bytes (complex64)')
     result, f, db = analyze(np.fromfile(args.iq, dtype=np.complex64), args.sample_rate,
-                             args.nperseg, args.discard_seconds)
+                             args.nperseg, args.discard_seconds, args.discard_tail_samples)
     args.iq.with_suffix('.json').write_text(json.dumps(result, indent=2))
     plot(f, db, args.iq.with_suffix('.png'), spacing=args.spacing)
     print(json.dumps(result, indent=2))

@@ -1,0 +1,899 @@
+options:
+  parameters:
+    author: 7M4MON
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: Standard GNU Radio CPM/FEC; edit variables and restart.
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: qt_gui
+    hier_block_src_path: '.:'
+    id: framed_4cpfsk
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: run
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: 'Gaussian 4CPFSK: framed single carrier'
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate:
+    - 8
+    - 8
+    rotation: 0
+    state: enabled
+blocks:
+- name: symbol_rate
+  id: variable
+  parameters:
+    value: '1312.5'
+  states:
+    coordinate:
+    - 16
+    - 16
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: samples_per_symbol
+  id: variable
+  parameters:
+    value: '32'
+  states:
+    coordinate:
+    - 256
+    - 16
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: sample_rate
+  id: variable
+  parameters:
+    value: symbol_rate * samples_per_symbol
+  states:
+    coordinate:
+    - 496
+    - 16
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: modulation_index_h
+  id: variable
+  parameters:
+    value: '0.25'
+  states:
+    coordinate:
+    - 736
+    - 16
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: gaussian_bt
+  id: variable
+  parameters:
+    value: '0.30'
+  states:
+    coordinate:
+    - 976
+    - 16
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: pulse_length
+  id: variable
+  parameters:
+    value: '4'
+  states:
+    coordinate:
+    - 16
+    - 106
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: channel_spacing
+  id: variable
+  parameters:
+    value: '2500'
+  states:
+    coordinate:
+    - 256
+    - 106
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: seed
+  id: variable
+  parameters:
+    value: '12345'
+  states:
+    coordinate:
+    - 496
+    - 106
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: duration_seconds
+  id: parameter
+  parameters:
+    label: Capture duration (rounded up to whole frames)
+    type: eng_float
+    value: '60'
+    short_id: ''
+    hide: none
+  states:
+    coordinate:
+    - 736
+    - 106
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: iq_path
+  id: variable
+  parameters:
+    value: '''framed_4cpfsk.cf32'''
+  states:
+    coordinate:
+    - 976
+    - 106
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: frame_count
+  id: variable
+  parameters:
+    value: max(1, int(np.ceil(duration_seconds * symbol_rate / 112)))
+  states:
+    coordinate:
+    - 16
+    - 196
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: start_sequence
+  id: variable
+  parameters:
+    value: '0'
+  states:
+    coordinate:
+    - 256
+    - 196
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: frame_flags
+  id: variable
+  parameters:
+    value: '0'
+  states:
+    coordinate:
+    - 496
+    - 196
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: dibit_path
+  id: variable
+  parameters:
+    value: '''framed_4cpfsk.dibits'''
+  states:
+    coordinate:
+    - 736
+    - 196
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: numpy_import
+  id: import
+  parameters:
+    imports: import numpy as np
+  states:
+    coordinate:
+    - 16
+    - 350
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: radio_frame
+  id: epy_module
+  parameters:
+    source_code: "\"\"\"Experimental SNAC radio frame v2: information bits and stock\
+      \ GNU Radio framing.\n\nCustom code only packs 84 payload bits, 8 control bits\
+      \ and CRC-12. FEC, bit\nrepacking and sync multiplexing use GNU Radio blocks,\
+      \ just as in the GRC.\n\"\"\"\nimport argparse\nimport json\nimport operator\n\
+      import wave\nfrom pathlib import Path\n\nimport numpy as np\n\nPAYLOAD_BITS\
+      \ = 84\nINFORMATION_BITS = 104\nCODED_BITS = 208\nFRAME_SYMBOLS = 112\nPOLYNOMIALS\
+      \ = [109, 79]  # GNU Radio bit-mask convention, positive = no inversion.\nINTERLEAVER_ROWS,\
+      \ INTERLEAVER_COLS = 16, 13\nWHITENING_MASK, WHITENING_SEED, WHITENING_LEN =\
+      \ 0x21, 0x1ff, 8\n# GNU Radio inserts feedback at bit index 8: this is a nine-bit\
+      \ register.\n# Experimental fixed word: two occurrences of each dibit; not an\
+      \ acquisition claim.\nSYNC_DIBITS = (0, 3, 1, 0, 2, 1, 3, 2)  # 00 11 01 00\
+      \ 10 01 11 10 = 0x349e\n\n\ndef wav_transmission_info(filename, repeat_count=5):\n\
+      \    \"\"\"Validate the same PCM input contract as the existing SNAC WAV example.\"\
+      \"\"\n    repeats = operator.index(repeat_count)\n    if repeats < 1:\n    \
+      \    raise ValueError('repeat_count must be an integer >= 1 (total number of\
+      \ plays)')\n    with wave.open(str(filename), 'rb') as wav:\n        if wav.getframerate()\
+      \ != 24000 or wav.getnchannels() != 1 or wav.getcomptype() != 'NONE':\n    \
+      \        raise ValueError('Use an uncompressed 24000 Hz mono PCM WAV')\n   \
+      \     if wav.getsampwidth() not in (1, 2, 3, 4) or wav.getnframes() < 1:\n \
+      \           raise ValueError('WAV must contain nonempty 8/16/24/32-bit integer\
+      \ PCM')\n        samples = wav.getnframes()\n    total = samples*repeats\n \
+      \   return dict(input_path=str(Path(filename).resolve()), wav_samples=samples,\
+      \ repeat_count=repeats,\n                total_audio_samples=total, frame_count=(total+2047)//2048,\n\
+      \                audio_seconds=total/24000, final_frame_audio_samples=(total-1)%2048+1)\n\
+      \n\ndef checked_bits(bits, size=None):\n    values = np.asarray(bits)\n    if\
+      \ values.ndim != 1 or not np.all((values == 0) | (values == 1)):\n        raise\
+      \ ValueError('Expected a one-dimensional array of bits (0 or 1)')\n    if size\
+      \ is not None and len(values) != size:\n        raise ValueError(f'Expected\
+      \ {size} bits, got {len(values)}')\n    return values.astype(np.uint8)\n\n\n\
+      def integer_bits(value, width):\n    value = operator.index(value)\n    if not\
+      \ 0 <= value < (1 << width):\n        raise ValueError(f'Value must fit in {width}\
+      \ bits')\n    return np.array([(value >> i) & 1 for i in range(width-1, -1,\
+      \ -1)], dtype=np.uint8)\n\n\ndef crc12(bits):\n    \"\"\"CRC-12/DECT parameters:\
+      \ poly=0x80f, init=0, no reflection/xorout.\n\n    Feed exactly the supplied\
+      \ bits MSB first; there is no byte alignment padding.\n    Check value for ASCII\
+      \ '123456789' is 0xf5b. Append register MSB first.\n    \"\"\"\n    register\
+      \ = 0\n    for bit in checked_bits(bits):\n        feedback = ((register >>\
+      \ 11) & 1) ^ int(bit)\n        register = (register << 1) & 0xfff\n        if\
+      \ feedback:\n            register ^= 0x80f\n    return register\n\n\ndef pack_information(payload,\
+      \ sequence=0, flags=0):\n    \"\"\"Return 104 unpacked bits: payload[84], sequence[6],\
+      \ flags[2], CRC[12].\"\"\"\n    payload = checked_bits(payload, PAYLOAD_BITS)\n\
+      \    body = np.concatenate([payload, integer_bits(sequence, 6), integer_bits(flags,\
+      \ 2)])\n    return np.concatenate([body, integer_bits(crc12(body), 12)])\n\n\
+      \ndef random_information(frame_count, seed=12345, start_sequence=0, flags=0):\n\
+      \    \"\"\"Finite frame bank; sequence increments modulo 64, seed controls payload\
+      \ only.\"\"\"\n    frame_count = operator.index(frame_count)\n    if frame_count\
+      \ < 1:\n        raise ValueError('frame_count must be positive')\n    integer_bits(start_sequence,\
+      \ 6)\n    integer_bits(flags, 2)\n    rng = np.random.default_rng(seed)\n  \
+      \  payloads = rng.integers(0, 2, (frame_count, PAYLOAD_BITS), dtype=np.uint8)\n\
+      \    return np.concatenate([pack_information(payload, (start_sequence+i) % 64,\
+      \ flags)\n                           for i, payload in enumerate(payloads)])\n\
+      \n\ndef encoder_object():\n    from gnuradio import fec\n    return fec.cc_encoder_make(INFORMATION_BITS,\
+      \ 7, 2, POLYNOMIALS,\n                               0, fec.CC_TAILBITING, False)\n\
+      \n\ndef make_symbols(information):\n    \"\"\"Stock FEC -> interleave -> whiten\
+      \ -> Repack Bits -> sync mux chain.\n\n    The Head removes any extra sync emitted\
+      \ before the mux sees data EOF.\n    No custom FEC, bit-pair mapper or scheduler\
+      \ block is used here.\n    \"\"\"\n    from gnuradio import blocks, digital,\
+      \ fec, gr\n    information = checked_bits(information)\n    if len(information)\
+      \ == 0 or len(information) % INFORMATION_BITS:\n        raise ValueError('Information\
+      \ must contain complete 104-bit frames')\n    count = len(information)//INFORMATION_BITS\n\
+      \    tb = gr.top_block()\n    source = blocks.vector_source_b(information.tolist(),\
+      \ False)\n    encoder = fec.extended_encoder(encoder_object(), threading=None,\
+      \ puncpat='11')\n    interleaver = blocks.matrix_interleaver(gr.sizeof_char,\
+      \ INTERLEAVER_ROWS, INTERLEAVER_COLS, False)\n    whitening = digital.additive_scrambler_bb(WHITENING_MASK,\
+      \ WHITENING_SEED,\n        WHITENING_LEN, count=CODED_BITS, bits_per_byte=1,\
+      \ reset_tag_key='')\n    pairs = blocks.repack_bits_bb(1, 2, '', False, gr.GR_MSB_FIRST)\n\
+      \    sync = blocks.vector_source_b(SYNC_DIBITS, True)\n    mux = blocks.stream_mux(gr.sizeof_char,\
+      \ [8, 104])\n    head = blocks.head(gr.sizeof_char, count*FRAME_SYMBOLS)\n \
+      \   sink = blocks.vector_sink_b()\n    tb.connect(source, encoder, interleaver,\
+      \ whitening, pairs, (mux, 1))\n    tb.connect(sync, (mux, 0))\n    tb.connect(mux,\
+      \ head, sink)\n    tb.run()\n    symbols = np.asarray(sink.data(), dtype=np.uint8)\n\
+      \    if len(symbols) != count*FRAME_SYMBOLS:\n        raise RuntimeError(f'Incomplete\
+      \ frame output: {len(symbols)} symbols')\n    return symbols\n\n\ndef format_metadata():\n\
+      \    return dict(format='snac-radio-experimental-v2', payload_bits=84,\n   \
+      \             sequence_bits=6, flags_bits=2, information_bits=104,\n       \
+      \         crc=dict(width=12, poly='0x80f', init=0, refin=False, refout=False,\n\
+      \                         xorout=0, check_123456789='0xf5b', protected_bits=92,\n\
+      \                         bit_order='MSB first, no byte padding'),\n       \
+      \         fec=dict(k=7, rate='1/2', polys=POLYNOMIALS, mode='CC_TAILBITING',\n\
+      \                         padded=False, coded_bits=208),\n                sync_dibits=SYNC_DIBITS,\
+      \ frame_symbols=112, mapping=[-3, -1, 3, 1],\n                interleaver=dict(rows=16,\
+      \ cols=13, order='write rows, read columns', frame_bits=208),\n            \
+      \    scrambler=dict(type='additive XOR', mask='0x21', seed='0x1ff',\n      \
+      \              gnuradio_len=8, register_bits=9, count=208, bits_per_byte=1,\n\
+      \                    reset='before every coded frame', sync_excluded=True))\n\
+      \n\ndef write_capture_metadata(iq_path, frames, seed, sequence, flags, symbol_rate,\
+      \ sps,\n                           h, bt, length, spacing, carriers):\n    \"\
+      \"\"Record the exact planned finite capture; completion is checked via file\
+      \ length.\"\"\"\n    record = dict(**format_metadata(), frames=frames, seed=seed,\n\
+      \        carrier_seeds=[seed+i for i in range(carriers)], start_sequence=sequence,\
+      \ flags=flags,\n        symbol_rate=symbol_rate, samples_per_symbol=sps, sample_rate=symbol_rate*sps,\n\
+      \        h=h, bt=bt, pulse_length=length, channel_spacing=spacing, carriers=carriers,\n\
+      \        frame_duration_seconds=112/symbol_rate, drain_symbols=length,\n   \
+      \     expected_iq_samples=(112*frames+length)*sps,\n        expected_dibits_per_carrier=112*frames,\n\
+      \        capture_status='planned; a manually interrupted capture may be shorter')\n\
+      \    Path(str(iq_path)+'.frames.json').write_text(json.dumps(record, indent=2)+'\\\
+      n')\n\n\ndef main():\n    ap = argparse.ArgumentParser(description=__doc__)\n\
+      \    ap.add_argument('--frames', type=int, default=704)\n    ap.add_argument('--seed',\
+      \ type=int, default=12345)\n    ap.add_argument('--sequence', type=int, default=0)\n\
+      \    ap.add_argument('--flags', type=int, default=0)\n    ap.add_argument('--output',\
+      \ type=Path, default=Path('framed_4cpfsk.dibits'))\n    args = ap.parse_args()\n\
+      \    info = random_information(args.frames, args.seed, args.sequence, args.flags)\n\
+      \    symbols = make_symbols(info)\n    args.output.parent.mkdir(parents=True,\
+      \ exist_ok=True)\n    symbols.tofile(args.output)\n    record = dict(**format_metadata(),\
+      \ frames=args.frames, seed=args.seed,\n                  start_sequence=args.sequence,\
+      \ flags=args.flags,\n                  first_information_bits=''.join(map(str,\
+      \ info[:104].tolist())),\n                  first_frame_dibits=symbols[:112].tolist())\n\
+      \    args.output.with_suffix('.frames.json').write_text(json.dumps(record, indent=2)+'\\\
+      n')\n    print(f'{args.frames} frames, {len(symbols)} dibits -> {args.output}')\n\
+      \n\nif __name__ == '__main__':\n    main()\n"
+  states:
+    coordinate:
+    - 600
+    - 350
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: capture_metadata
+  id: snippet
+  parameters:
+    section: main_after_init
+    priority: '1'
+    code: radio_frame.write_capture_metadata(self.iq_path, self.frame_count, self.seed,
+      self.start_sequence, self.frame_flags, self.symbol_rate, self.samples_per_symbol,
+      self.modulation_index_h, self.gaussian_bt, self.pulse_length, self.channel_spacing,
+      1)
+  states:
+    coordinate:
+    - 850
+    - 350
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: window_size
+  id: snippet
+  parameters:
+    section: main_after_init
+    priority: '0'
+    code: self.resize(1200, 900)
+  states:
+    coordinate:
+    - 320
+    - 350
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: source_0
+  id: blocks_vector_source_x
+  parameters:
+    type: byte
+    vector: radio_frame.random_information(frame_count, seed + 0, start_sequence,
+      frame_flags).tolist()
+    tags: '[]'
+    repeat: 'False'
+    vlen: '1'
+  states:
+    coordinate:
+    - 16
+    - 500
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: encoder_definition_0
+  id: variable_cc_encoder_def
+  parameters:
+    ndim: '0'
+    dim1: '1'
+    dim2: '1'
+    framebits: '104'
+    k: '7'
+    rate: '2'
+    polys: '[109, 79]'
+    state_start: '0'
+    mode: fec.CC_TAILBITING
+    padding: 'False'
+  states:
+    coordinate:
+    - 250
+    - 600
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: fec_0
+  id: fec_extended_encoder
+  parameters:
+    encoder_list: encoder_definition_0
+    threadtype: none
+    puncpat: '''11'''
+  states:
+    coordinate:
+    - 300
+    - 500
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: interleaver_0
+  id: blocks_matrix_interleaver
+  parameters:
+    type: byte
+    vlen: '1'
+    rows: '16'
+    cols: '13'
+    deint: 'False'
+  states:
+    coordinate:
+    - 520
+    - 500
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: whitening_0
+  id: digital_additive_scrambler_bb
+  parameters:
+    mask: '0x21'
+    seed: '0x1ff'
+    len: '8'
+    count: '208'
+    bits_per_byte: '1'
+    reset_tag_key: ''''''
+  states:
+    coordinate:
+    - 740
+    - 500
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: pairs_0
+  id: blocks_repack_bits_bb
+  parameters:
+    k: '1'
+    l: '2'
+    len_tag_key: ''''''
+    align_output: 'False'
+    endianness: gr.GR_MSB_FIRST
+  states:
+    coordinate:
+    - 960
+    - 500
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: sync_0
+  id: blocks_vector_source_x
+  parameters:
+    type: byte
+    vector: radio_frame.SYNC_DIBITS
+    tags: '[]'
+    repeat: 'True'
+    vlen: '1'
+  states:
+    coordinate:
+    - 1120
+    - 620
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: frame_mux_0
+  id: blocks_stream_mux
+  parameters:
+    type: byte
+    lengths: '[8, 104]'
+    num_inputs: '2'
+    vlen: '1'
+  states:
+    coordinate:
+    - 1320
+    - 500
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: frame_limit_0
+  id: blocks_head
+  parameters:
+    type: byte
+    num_items: frame_count * 112
+    vlen: '1'
+  states:
+    coordinate:
+    - 1520
+    - 500
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: dibit_file_0
+  id: blocks_file_sink
+  parameters:
+    file: dibit_path
+    type: byte
+    vlen: '1'
+    unbuffered: 'False'
+    append: 'False'
+  states:
+    coordinate:
+    - 1540
+    - 620
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: gray_0
+  id: digital_map_bb
+  parameters:
+    map: '[253, 255, 3, 1]'
+  states:
+    coordinate:
+    - 1760
+    - 500
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: cpm_0
+  id: digital_cpmmod_bc
+  parameters:
+    type: analog.cpm.GAUSSIAN
+    mod_index: modulation_index_h
+    samples_per_symbol: samples_per_symbol
+    L: pulse_length
+    beta: gaussian_bt
+  states:
+    coordinate:
+    - 1960
+    - 500
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: drain_zero_0
+  id: blocks_vector_source_x
+  parameters:
+    type: byte
+    vector: '[0]'
+    tags: '[]'
+    repeat: 'True'
+    vlen: '1'
+  states:
+    coordinate:
+    - 1760
+    - 700
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: drain_mux_0
+  id: blocks_stream_mux
+  parameters:
+    type: byte
+    lengths: '[frame_count * 112, pulse_length]'
+    num_inputs: '2'
+    vlen: '1'
+  states:
+    coordinate:
+    - 1950
+    - 700
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: drain_limit_0
+  id: blocks_head
+  parameters:
+    type: byte
+    num_items: frame_count * 112 + pulse_length
+    vlen: '1'
+  states:
+    coordinate:
+    - 2200
+    - 700
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: capture_length
+  id: blocks_head
+  parameters:
+    type: complex
+    num_items: (frame_count * 112 + pulse_length) * samples_per_symbol
+    vlen: '1'
+  states:
+    coordinate:
+    - 2660
+    - 380
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: throttle
+  id: blocks_throttle
+  parameters:
+    type: complex
+    samples_per_second: sample_rate
+    vlen: '1'
+    ignoretag: 'True'
+  states:
+    coordinate:
+    - 2880
+    - 380
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: frequency
+  id: qtgui_freq_sink_x
+  parameters:
+    type: complex
+    name: Spectrum (use mouse zoom for +/-5 kHz)
+    fftsize: '8192'
+    freqhalf: 'True'
+    wintype: window.WIN_BLACKMAN_hARRIS
+    norm_window: 'True'
+    fc: '0'
+    bw: sample_rate
+    grid: 'True'
+    autoscale: 'False'
+    average: '0.05'
+    ymin: '-140'
+    ymax: '10'
+    label: Relative Gain
+    units: dB
+    nconnections: '1'
+    update_time: '0.10'
+    gui_hint: 0,0,1,1
+    showports: 'False'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_level: '0.0'
+    tr_chan: '0'
+    tr_tag: '""'
+    ctrlpanel: 'False'
+    legend: 'True'
+    axislabels: 'True'
+    label1: ''
+    width1: '1'
+    color1: '"blue"'
+    alpha1: '1.0'
+    label2: ''''''
+    width2: '1'
+    color2: '"red"'
+    alpha2: '1.0'
+    label3: ''''''
+    width3: '1'
+    color3: '"green"'
+    alpha3: '1.0'
+    label4: ''''''
+    width4: '1'
+    color4: '"black"'
+    alpha4: '1.0'
+    label5: ''''''
+    width5: '1'
+    color5: '"cyan"'
+    alpha5: '1.0'
+    label6: ''''''
+    width6: '1'
+    color6: '"magenta"'
+    alpha6: '1.0'
+    label7: ''''''
+    width7: '1'
+    color7: '"yellow"'
+    alpha7: '1.0'
+    label8: ''''''
+    width8: '1'
+    color8: '"dark red"'
+    alpha8: '1.0'
+    label9: ''''''
+    width9: '1'
+    color9: '"dark green"'
+    alpha9: '1.0'
+    label10: ''''''
+    width10: '1'
+    color10: '"dark blue"'
+    alpha10: '1.0'
+  states:
+    coordinate:
+    - 3110
+    - 380
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: waterfall
+  id: qtgui_waterfall_sink_x
+  parameters:
+    type: complex
+    name: Gaussian 4CPFSK
+    fftsize: '8192'
+    freqhalf: 'True'
+    wintype: window.WIN_BLACKMAN_hARRIS
+    fc: '0'
+    bw: sample_rate
+    int_min: '-140'
+    int_max: '10'
+    grid: 'False'
+    nconnections: '1'
+    update_time: '0.10'
+    gui_hint: 1,0,1,1
+    showports: 'False'
+    legend: 'True'
+    label1: ''
+    axislabels: 'True'
+    color1: '0'
+    alpha1: '1.0'
+    label2: ''
+    color2: ''
+    alpha2: '1.0'
+    label3: ''
+    color3: ''
+    alpha3: '1.0'
+    label4: ''
+    color4: ''
+    alpha4: '1.0'
+    label5: ''
+    color5: ''
+    alpha5: '1.0'
+    label6: ''
+    color6: ''
+    alpha6: '1.0'
+    label7: ''
+    color7: ''
+    alpha7: '1.0'
+    label8: ''
+    color8: ''
+    alpha8: '1.0'
+    label9: ''
+    color9: ''
+    alpha9: '1.0'
+    label10: ''
+    color10: ''
+    alpha10: '1.0'
+  states:
+    coordinate:
+    - 3110
+    - 540
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+- name: iq_file
+  id: blocks_file_sink
+  parameters:
+    file: iq_path
+    type: complex
+    vlen: '1'
+    unbuffered: 'False'
+    append: 'False'
+  states:
+    coordinate:
+    - 3110
+    - 700
+    rotation: 0
+    state: enabled
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+connections:
+- - source_0
+  - '0'
+  - fec_0
+  - '0'
+- - fec_0
+  - '0'
+  - interleaver_0
+  - '0'
+- - interleaver_0
+  - '0'
+  - whitening_0
+  - '0'
+- - whitening_0
+  - '0'
+  - pairs_0
+  - '0'
+- - pairs_0
+  - '0'
+  - frame_mux_0
+  - '1'
+- - sync_0
+  - '0'
+  - frame_mux_0
+  - '0'
+- - frame_mux_0
+  - '0'
+  - frame_limit_0
+  - '0'
+- - frame_limit_0
+  - '0'
+  - dibit_file_0
+  - '0'
+- - frame_limit_0
+  - '0'
+  - gray_0
+  - '0'
+- - gray_0
+  - '0'
+  - drain_mux_0
+  - '0'
+- - drain_zero_0
+  - '0'
+  - drain_mux_0
+  - '1'
+- - drain_mux_0
+  - '0'
+  - drain_limit_0
+  - '0'
+- - drain_limit_0
+  - '0'
+  - cpm_0
+  - '0'
+- - cpm_0
+  - '0'
+  - capture_length
+  - '0'
+- - capture_length
+  - '0'
+  - throttle
+  - '0'
+- - throttle
+  - '0'
+  - frequency
+  - '0'
+- - throttle
+  - '0'
+  - waterfall
+  - '0'
+- - throttle
+  - '0'
+  - iq_file
+  - '0'
+metadata:
+  file_format: 1

@@ -10,7 +10,23 @@ GNU Radio 3.10 用の Python OOT モジュールです。24 kHz mono float 音�
 SNAC の3階層の token に変換し、PMT message 経由で復号します。
 ファイル保存では12-bit packingに対応します。Codec OOT本体とは別に、標準ブロックで
 構成したGaussian 4CPFSKのGRC波形評価例を追加しています。
-無線フレーム生成、FEC、Codecから変調器への接続、SDR送信は未実装です。
+評価例ではランダム84 bitをCRC・FEC・同期語付き無線フレームへ組み立てます。
+2026-10-07に標準ブロックのフレーム内インターリーブとホワイトニングも追加しました。
+WAV→SNAC Encoder→無線フレーム→変調の接続版も追加しました。WAVは初期値で合計5回
+繰り返します。保存IQをWAVへ戻す有限ファイル受信機も追加しました。SDR送受信は未実装です。
+
+[WAV→SNAC送信GRC](examples/narrowband_4cpfsk/wav_snac_4cpfsk.grc)は24 kHz mono PCMを入力し、
+標準Wav File SourceとHeadで回数を制限します。SNACが出す1/2/4 tokenを84 bitへ詰め、
+既存v2フレームへ接続します。約42 msの短い音源も含め、実モデルで5回・1回再生、
+最終部分フレーム、EOS、IQ保存まで確認しました。
+起動方法と出力仕様は[評価例README](examples/narrowband_4cpfsk/README.md)を参照してください。
+
+[受信GRC](examples/narrowband_4cpfsk/receive_snac_4cpfsk.grc)は送信IQと`.frames.json`を読み、
+標準Quadrature Demod・FIR等化・ホワイトニング解除・デインターリーブ・tail-biting FEC復号を通し、
+CRC／Sequence確認後のtokenを既存SNAC Decoderへ渡します。24 kHz mono PCM16 WAVへ保存し、
+スピーカー出力はありません。独自処理は有限captureの同期捕捉とフレーム／token変換です。
+今回はCFO・クロック偏差なしのファイル接続で、音声長にはJSONを使います。
+連続した実RF受信や雑音下の受信性能評価は今後の段階です。
 
 ## SNACを無線に載せるためのフレーム案と評価結果（2026-10-06）
 
@@ -22,18 +38,18 @@ SNACのtokenを12 bitで詰めると、2048音声サンプル（85.333… ms）�
 | 段階 | 内容 | 長さ |
 |---|---|---:|
 | Codec payload | 7 tokens × 12 bit | 84 bit |
-| 管理情報 | Sequence / Flags | 8 bit |
-| 誤り検出 | CRC-12（方式詳細は未定） | 12 bit |
+| 管理情報 | Sequence 6 bit / Flags 2 bit | 8 bit |
+| 誤り検出 | CRC-12/DECT | 12 bit |
 | FEC入力 | 上記の合計 | 104 bit |
-| FEC出力 | rate 1/2、追加終端ビットなしと仮定 | 208 bit |
+| FEC出力 | rate 1/2、K=7、tail-biting、追加終端ビットなし | 208 bit |
 | 4値変調 | 2 bit/symbol | 104 symbols |
-| 同期 | Mini Sync（仮置き） | 8 symbols |
-| 合計 | 85.333… msごとの無線フレーム案 | 112 symbols |
+| 同期 | Mini Sync（実験用固定列0x349E） | 8 symbols |
+| 合計 | 85.333… msごとの無線フレーム | 112 symbols |
 
 したがって必要なシンボルレートは112 / (2048 / 24000) = **1312.5 sym/s**です。
 同期区間も2 bit/symbolとして数えた総伝送速度は2625 bit/s、FEC出力データ部分は
-2437.5 bit/sです。これはフレーム設計上の収支であり、現在のGRCが実際に
-CRC・FEC・同期語を挿入しているわけではありません。
+2437.5 bit/sです。最初はこの収支に必要な速度で無構造ランダム波形を評価し、
+その後、CRC・FEC・同期語を実際に挿入するフレーム版GRCを追加しました。
 
 次に、この速度で2.5 kHz、可能なら2.0 kHzのチャネル間隔を狙えるかを調べるため、
 Gaussian-shaped 4CPFSKを選びました。周波数偏移をGaussianパルスで整形してから
@@ -48,7 +64,7 @@ Gaussian-shaped 4CPFSKを選びました。周波数偏移をGaussianパルス�
 2.0 / 2.5 kHz間隔で起動・IQ保存を確認しました。
 
 GNU Radio 3.10.1.1 / Ubuntu 22.04 (WSL)、60秒のIQ、先頭0.1秒除外、
-8192点Blackman-Harris窓のWelch法による初期値の結果は次のとおりです。
+8192点Blackman-Harris窓のWelch法による、最初の無構造ランダム版の結果は次のとおりです。
 
 | 指標 | 結果 |
 |---|---:|
@@ -63,16 +79,45 @@ ACPRはチャネル間隔と同じ幅の矩形帯域を積分した隣接／主�
 BER、受信同期、周波数誤差、隣接局との電力差、実RFでの成立性は未評価です。
 hやBTを小さくして狭帯域化できても、受信性能が良くなるとは限りません。
 
-フレーム案も今後の検証が必要です。例えば拘束長7の畳み込み符号に6個の終端入力
-ビットを追加すると、220 coded bits + 8 sync symbols = 118 symbolsとなり、
-必要レートは1382.8125 sym/sへ増えます。8 symbolsのMini Syncも捕捉性能を
-保証するものではありません。実フレーム化の際は符号方式・終端方法・同期列を決め、
-フレーム境界で位相とGaussianフィルタの状態を維持した波形を再評価します。
+実フレーム化では、GNU Radio標準のtail-biting畳み込み符号を採用しました。
+K=7、rate 1/2、polys=[109,79]で、各104-bitブロックの末尾6 bitから初期状態を決め、
+追加終端ビットなしで208 coded bitsを出力します。通常の終端で6 bitを追加すると
+118 symbols/frame、1382.8125 sym/sが必要になるため、112 symbols/frameを
+維持できるtail-bitingを選びました。Sequenceは6 bit、Flagsは2 bit、CRCは
+payloadと管理情報の92 bitを保護するCRC-12/DECT、同期は固定8 dibits
+[0,3,1,0,2,1,3,2]です。同期語の捕捉性能は今後検証します。
+
+情報ビットとCRCの組立てだけをPythonで行い、FEC・dibit変換・同期挿入・CPMは
+標準ブロックを使っています。フレーム境界で位相・Gaussianフィルタ状態を維持し、
+収録終了時にだけフィルタの残りを出力します。送信機の独自FEC実装はありません。
+
+**フレーム付きv1（インターリーブ／ホワイトニング追加前）**の初期値（同じh=.25、BT=.30、seed=12345、704フレーム、
+末尾処理をPSDから除外）を測定した結果は次のとおりです。
+
+| 指標 | フレーム付き版 |
+|---|---:|
+| 99% occupied bandwidth | 1372.4 Hz |
+| 99.9% occupied bandwidth | 1835.5 Hz |
+| 2.0 kHz間隔 ACPR（下側／上側） | -36.26 / -36.42 dB |
+| 2.5 kHz間隔 ACPR（下側／上側） | -46.73 / -46.68 dB |
+
+今回の乱数payloadでは、フレーム化後も初期値の帯域・隣接帯域漏洩は同程度でした。
+CRC既知値、1-bit誤り検出、Sequence折返し、独立した参照計算とのFEC一致、
+112 symbolsごとの同期位置、GRCのdibit/IQ保存と末尾処理を確認しています。
+この送信波形評価はBERや実RFの無線リンク成立の検証ではありません。有限ファイル受信の検証は評価例READMEへ追記しています。
+
+2026-10-07のv2では、FEC出力208 bitを標準Matrix Interleaver（16行×13列）で
+並べ替え、標準Additive Scramblerでホワイトニングしてからdibitへ変換します。
+ホワイトニングは9-bit LFSR（GNU Radio mask=0x21、seed=0x1FF、len=8）を
+208 bitごとにリセットします。同期語は対象外で、112 symbols/frameは変わりません。
+逆処理で元のFEC出力に戻ることを確認しています。実用性能を最適化した設計ではなく、
+一通りの送信処理を持つ実験例です。v1とデータ部のbit列は互換ではありません。
 
 実行方法、測定定義、12条件の結果は
 [4CPFSK評価例のREADME](examples/narrowband_4cpfsk/README.md)を参照してください。
-GRCは[単一キャリア](examples/narrowband_4cpfsk/narrowband_4cpfsk.grc)と
-[3キャリア](examples/narrowband_4cpfsk/three_carriers.grc)を用意しています。
+フレーム付きGRCは[単一キャリア](examples/narrowband_4cpfsk/framed_4cpfsk.grc)と
+[3キャリア](examples/narrowband_4cpfsk/three_carriers_framed.grc)を用意しています。
+以前の無構造ランダム版も比較用に残しています。
 
 ## Windowsでの利用（WSL 2）
 

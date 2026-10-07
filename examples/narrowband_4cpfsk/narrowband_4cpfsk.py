@@ -7,7 +7,7 @@
 # GNU Radio Python Flow Graph
 # Title: Gaussian 4CPFSK: single carrier
 # Author: 7M4MON
-# Description: Standard GNU Radio CPM; edit variables and restart.
+# Description: Standard GNU Radio CPM/FEC; edit variables and restart.
 # GNU Radio version: 3.10.1.1
 
 from packaging.version import Version as StrictVersion

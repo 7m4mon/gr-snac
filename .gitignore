@@ -6,3 +6,5 @@ build-wsl-context/
 .venv/
 *.wav
 *.snac
+handoff/
+*Zone.Identifier

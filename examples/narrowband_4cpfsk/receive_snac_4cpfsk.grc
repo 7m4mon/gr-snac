@@ -1,0 +1,833 @@
+options:
+  parameters:
+    author: 7M4MON
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: 'Finite file receiver: fixed sample clock, no CFO tracking; metadata
+      supplies audio length.'
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: qt_gui
+    hier_block_src_path: '.:'
+    id: receive_snac_4cpfsk
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: run
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: 4CPFSK IQ -> SNAC -> WAV
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 8]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: capture
+  id: variable
+  parameters:
+    comment: ''
+    value: rx_support.preview_info(iq_path)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [512, 60.0]
+    rotation: 0
+    state: enabled
+- name: decoder
+  id: variable
+  parameters:
+    comment: ''
+    value: fec.cc_decoder.make(104, 7, 2, [109, 79], 0, -1, fec.CC_TAILBITING, False)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [672, 60.0]
+    rotation: 0
+    state: enabled
+- name: sample_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: '42000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [856, 60.0]
+    rotation: 0
+    state: enabled
+- name: acquisition
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"Finite capture buffer and protocol-specific sync extraction\
+      \ for the GRC.\"\"\"\nimport json\nfrom pathlib import Path\nimport numpy as\
+      \ np\nfrom gnuradio import gr\n\n\nclass blk(gr.basic_block):\n    def __init__(self,\
+      \ sample_count=1024, frame_count=1, acquire_fn=None, status_path='', validation_error=''):\n\
+      \        gr.basic_block.__init__(self, name='Finite Capture Sync / 4-level Decisions',\n\
+      \                                in_sig=[np.float32], out_sig=[np.uint8])\n\
+      \        if validation_error:\n            raise ValueError(validation_error)\n\
+      \        self.sample_count, self.frame_count = int(sample_count), int(frame_count)\n\
+      \        if self.sample_count < 1 or self.frame_count < 1:\n            raise\
+      \ ValueError('Positive finite capture and frame counts required')\n        self.acquire_fn,\
+      \ self.status_path = acquire_fn, status_path\n        self.buffer = np.empty(self.sample_count,\
+      \ dtype=np.float32)\n        self.received = self.offset = 0\n        self.bits\
+      \ = None\n        self.error = None\n        self.status = {}\n\n    def forecast(self,\
+      \ noutput_items, ninputs):\n        return [0 if self.bits is not None or self.error\
+      \ is not None else 1]\n\n    def general_work(self, input_items, output_items):\n\
+      \        if self.error is not None:\n            return -1\n        if self.bits\
+      \ is None:\n            n = min(len(input_items[0]), self.sample_count-self.received)\n\
+      \            self.buffer[self.received:self.received+n] = input_items[0][:n]\n\
+      \            self.received += n\n            self.consume(0, n)\n          \
+      \  if self.received < self.sample_count:\n                return 0\n       \
+      \     try:\n                self.bits, self.status = self.acquire_fn(self.buffer,\
+      \ self.frame_count)\n                self.status.update(error=None, captured_samples=self.received)\n\
+      \            except Exception as exc:\n                self.error = exc\n  \
+      \              self.status = dict(error=str(exc), captured_samples=self.received)\n\
+      \            self.buffer = None\n            if self.status_path:\n        \
+      \        Path(self.status_path).write_text(json.dumps(self.status, indent=2)+'\\\
+      n')\n            if self.error is not None:\n                return -1\n   \
+      \     n = min(len(output_items[0]), len(self.bits)-self.offset)\n        if\
+      \ n == 0:\n            return -1\n        output_items[0][:n] = self.bits[self.offset:self.offset+n]\n\
+      \        self.offset += n\n        return n\n"
+    acquire_fn: rx_support.acquire
+    affinity: ''
+    alias: ''
+    comment: ''
+    frame_count: capture['frames']
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    sample_count: capture['iq_samples'] + 320
+    status_path: wav_path + '.sync.json'
+    validation_error: capture['validation_error']
+  states:
+    _io_cache: ('Finite Capture Sync / 4-level Decisions', 'blk', [('sample_count',
+      '1024'), ('frame_count', '1'), ('acquire_fn', 'None'), ('status_path', "''"),
+      ('validation_error', "''")], [('0', 'float', 1)], [('0', 'byte', 1)], '', ['acquire_fn',
+      'frame_count', 'sample_count', 'status_path'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [848, 148.0]
+    rotation: 0
+    state: enabled
+- name: deinterleave
+  id: blocks_matrix_interleaver
+  parameters:
+    affinity: ''
+    alias: ''
+    cols: '13'
+    comment: ''
+    deint: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    rows: '16'
+    type: byte
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [224, 420.0]
+    rotation: 0
+    state: enabled
+- name: demod
+  id: analog_quadrature_demod_cf
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    gain: 32/(np.pi*0.25)
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [192, 164.0]
+    rotation: 0
+    state: enabled
+- name: drain
+  id: blocks_vector_source_x
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    repeat: 'False'
+    tags: '[]'
+    type: float
+    vector: '[0.0]*320'
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [280, 276.0]
+    rotation: 0
+    state: enabled
+- name: drain_mux
+  id: blocks_stream_mux
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    lengths: '[capture[''iq_samples''], 320]'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_inputs: '2'
+    type: float
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [408, 168.0]
+    rotation: 0
+    state: enabled
+- name: equalizer
+  id: fir_filter_xxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    decim: '1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_delay: '0'
+    taps: rx_support.equalizer_taps()
+    type: fff
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [616, 172.0]
+    rotation: 0
+    state: enabled
+- name: fec_decode
+  id: fec_extended_decoder
+  parameters:
+    affinity: ''
+    alias: ''
+    ann: None
+    comment: ''
+    decoder_list: decoder
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    puncpat: '11'
+    threadtype: none
+    value: fec_extended_decoder
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [928, 412.0]
+    rotation: 0
+    state: enabled
+- name: imports
+  id: import
+  parameters:
+    alias: ''
+    comment: ''
+    imports: 'import numpy as np
+
+      from gnuradio import fec'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [752, 12.0]
+    rotation: 0
+    state: enabled
+- name: iq_path
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: iq_path
+    short_id: ''
+    type: str
+    value: wav_snac_4cpfsk.cf32
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [184, 12.0]
+    rotation: 0
+    state: enabled
+- name: iq_source
+  id: blocks_file_source
+  parameters:
+    affinity: ''
+    alias: ''
+    begin_tag: pmt.PMT_NIL
+    comment: ''
+    file: iq_path
+    length: '0'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    offset: '0'
+    repeat: 'False'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 132.0]
+    rotation: 0
+    state: enabled
+- name: offset
+  id: blocks_add_const_vxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    const: '-1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    type: float
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [768, 436.0]
+    rotation: 0
+    state: enabled
+- name: radio_frame
+  id: epy_module
+  parameters:
+    alias: ''
+    comment: ''
+    source_code: "\"\"\"Experimental SNAC radio frame v2: information bits and stock\
+      \ GNU Radio framing.\n\nCustom code only packs 84 payload bits, 8 control bits\
+      \ and CRC-12. FEC, bit\nrepacking and sync multiplexing use GNU Radio blocks,\
+      \ just as in the GRC.\n\"\"\"\nimport argparse\nimport json\nimport operator\n\
+      import wave\nfrom pathlib import Path\n\nimport numpy as np\n\nPAYLOAD_BITS\
+      \ = 84\nINFORMATION_BITS = 104\nCODED_BITS = 208\nFRAME_SYMBOLS = 112\nPOLYNOMIALS\
+      \ = [109, 79]  # GNU Radio bit-mask convention, positive = no inversion.\nINTERLEAVER_ROWS,\
+      \ INTERLEAVER_COLS = 16, 13\nWHITENING_MASK, WHITENING_SEED, WHITENING_LEN =\
+      \ 0x21, 0x1ff, 8\n# GNU Radio inserts feedback at bit index 8: this is a nine-bit\
+      \ register.\n# Experimental fixed word: two occurrences of each dibit; not an\
+      \ acquisition claim.\nSYNC_DIBITS = (0, 3, 1, 0, 2, 1, 3, 2)  # 00 11 01 00\
+      \ 10 01 11 10 = 0x349e\n\n\ndef wav_transmission_info(filename, repeat_count=5):\n\
+      \    \"\"\"Validate the same PCM input contract as the existing SNAC WAV example.\"\
+      \"\"\n    repeats = operator.index(repeat_count)\n    if repeats < 1:\n    \
+      \    raise ValueError('repeat_count must be an integer >= 1 (total number of\
+      \ plays)')\n    with wave.open(str(filename), 'rb') as wav:\n        if wav.getframerate()\
+      \ != 24000 or wav.getnchannels() != 1 or wav.getcomptype() != 'NONE':\n    \
+      \        raise ValueError('Use an uncompressed 24000 Hz mono PCM WAV')\n   \
+      \     if wav.getsampwidth() not in (1, 2, 3, 4) or wav.getnframes() < 1:\n \
+      \           raise ValueError('WAV must contain nonempty 8/16/24/32-bit integer\
+      \ PCM')\n        samples = wav.getnframes()\n    total = samples*repeats\n \
+      \   return dict(input_path=str(Path(filename).resolve()), wav_samples=samples,\
+      \ repeat_count=repeats,\n                total_audio_samples=total, frame_count=(total+2047)//2048,\n\
+      \                audio_seconds=total/24000, final_frame_audio_samples=(total-1)%2048+1)\n\
+      \n\ndef checked_bits(bits, size=None):\n    values = np.asarray(bits)\n    if\
+      \ values.ndim != 1 or not np.all((values == 0) | (values == 1)):\n        raise\
+      \ ValueError('Expected a one-dimensional array of bits (0 or 1)')\n    if size\
+      \ is not None and len(values) != size:\n        raise ValueError(f'Expected\
+      \ {size} bits, got {len(values)}')\n    return values.astype(np.uint8)\n\n\n\
+      def integer_bits(value, width):\n    value = operator.index(value)\n    if not\
+      \ 0 <= value < (1 << width):\n        raise ValueError(f'Value must fit in {width}\
+      \ bits')\n    return np.array([(value >> i) & 1 for i in range(width-1, -1,\
+      \ -1)], dtype=np.uint8)\n\n\ndef crc12(bits):\n    \"\"\"CRC-12/DECT parameters:\
+      \ poly=0x80f, init=0, no reflection/xorout.\n\n    Feed exactly the supplied\
+      \ bits MSB first; there is no byte alignment padding.\n    Check value for ASCII\
+      \ '123456789' is 0xf5b. Append register MSB first.\n    \"\"\"\n    register\
+      \ = 0\n    for bit in checked_bits(bits):\n        feedback = ((register >>\
+      \ 11) & 1) ^ int(bit)\n        register = (register << 1) & 0xfff\n        if\
+      \ feedback:\n            register ^= 0x80f\n    return register\n\n\ndef pack_information(payload,\
+      \ sequence=0, flags=0):\n    \"\"\"Return 104 unpacked bits: payload[84], sequence[6],\
+      \ flags[2], CRC[12].\"\"\"\n    payload = checked_bits(payload, PAYLOAD_BITS)\n\
+      \    body = np.concatenate([payload, integer_bits(sequence, 6), integer_bits(flags,\
+      \ 2)])\n    return np.concatenate([body, integer_bits(crc12(body), 12)])\n\n\
+      \ndef random_information(frame_count, seed=12345, start_sequence=0, flags=0):\n\
+      \    \"\"\"Finite frame bank; sequence increments modulo 64, seed controls payload\
+      \ only.\"\"\"\n    frame_count = operator.index(frame_count)\n    if frame_count\
+      \ < 1:\n        raise ValueError('frame_count must be positive')\n    integer_bits(start_sequence,\
+      \ 6)\n    integer_bits(flags, 2)\n    rng = np.random.default_rng(seed)\n  \
+      \  payloads = rng.integers(0, 2, (frame_count, PAYLOAD_BITS), dtype=np.uint8)\n\
+      \    return np.concatenate([pack_information(payload, (start_sequence+i) % 64,\
+      \ flags)\n                           for i, payload in enumerate(payloads)])\n\
+      \n\ndef encoder_object():\n    from gnuradio import fec\n    return fec.cc_encoder_make(INFORMATION_BITS,\
+      \ 7, 2, POLYNOMIALS,\n                               0, fec.CC_TAILBITING, False)\n\
+      \n\ndef make_symbols(information):\n    \"\"\"Stock FEC -> interleave -> whiten\
+      \ -> Repack Bits -> sync mux chain.\n\n    The Head removes any extra sync emitted\
+      \ before the mux sees data EOF.\n    No custom FEC, bit-pair mapper or scheduler\
+      \ block is used here.\n    \"\"\"\n    from gnuradio import blocks, digital,\
+      \ fec, gr\n    information = checked_bits(information)\n    if len(information)\
+      \ == 0 or len(information) % INFORMATION_BITS:\n        raise ValueError('Information\
+      \ must contain complete 104-bit frames')\n    count = len(information)//INFORMATION_BITS\n\
+      \    tb = gr.top_block()\n    source = blocks.vector_source_b(information.tolist(),\
+      \ False)\n    encoder = fec.extended_encoder(encoder_object(), threading=None,\
+      \ puncpat='11')\n    interleaver = blocks.matrix_interleaver(gr.sizeof_char,\
+      \ INTERLEAVER_ROWS, INTERLEAVER_COLS, False)\n    whitening = digital.additive_scrambler_bb(WHITENING_MASK,\
+      \ WHITENING_SEED,\n        WHITENING_LEN, count=CODED_BITS, bits_per_byte=1,\
+      \ reset_tag_key='')\n    pairs = blocks.repack_bits_bb(1, 2, '', False, gr.GR_MSB_FIRST)\n\
+      \    sync = blocks.vector_source_b(SYNC_DIBITS, True)\n    mux = blocks.stream_mux(gr.sizeof_char,\
+      \ [8, 104])\n    head = blocks.head(gr.sizeof_char, count*FRAME_SYMBOLS)\n \
+      \   sink = blocks.vector_sink_b()\n    tb.connect(source, encoder, interleaver,\
+      \ whitening, pairs, (mux, 1))\n    tb.connect(sync, (mux, 0))\n    tb.connect(mux,\
+      \ head, sink)\n    tb.run()\n    symbols = np.asarray(sink.data(), dtype=np.uint8)\n\
+      \    if len(symbols) != count*FRAME_SYMBOLS:\n        raise RuntimeError(f'Incomplete\
+      \ frame output: {len(symbols)} symbols')\n    return symbols\n\n\ndef format_metadata():\n\
+      \    return dict(format='snac-radio-experimental-v2', payload_bits=84,\n   \
+      \             sequence_bits=6, flags_bits=2, information_bits=104,\n       \
+      \         crc=dict(width=12, poly='0x80f', init=0, refin=False, refout=False,\n\
+      \                         xorout=0, check_123456789='0xf5b', protected_bits=92,\n\
+      \                         bit_order='MSB first, no byte padding'),\n       \
+      \         fec=dict(k=7, rate='1/2', polys=POLYNOMIALS, mode='CC_TAILBITING',\n\
+      \                         padded=False, coded_bits=208),\n                sync_dibits=SYNC_DIBITS,\
+      \ frame_symbols=112, mapping=[-3, -1, 3, 1],\n                interleaver=dict(rows=16,\
+      \ cols=13, order='write rows, read columns', frame_bits=208),\n            \
+      \    scrambler=dict(type='additive XOR', mask='0x21', seed='0x1ff',\n      \
+      \              gnuradio_len=8, register_bits=9, count=208, bits_per_byte=1,\n\
+      \                    reset='before every coded frame', sync_excluded=True))\n\
+      \n\ndef write_capture_metadata(iq_path, frames, seed, sequence, flags, symbol_rate,\
+      \ sps,\n                           h, bt, length, spacing, carriers):\n    \"\
+      \"\"Record the exact planned finite capture; completion is checked via file\
+      \ length.\"\"\"\n    record = dict(**format_metadata(), frames=frames, seed=seed,\n\
+      \        carrier_seeds=[seed+i for i in range(carriers)], start_sequence=sequence,\
+      \ flags=flags,\n        symbol_rate=symbol_rate, samples_per_symbol=sps, sample_rate=symbol_rate*sps,\n\
+      \        h=h, bt=bt, pulse_length=length, channel_spacing=spacing, carriers=carriers,\n\
+      \        frame_duration_seconds=112/symbol_rate, drain_symbols=length,\n   \
+      \     expected_iq_samples=(112*frames+length)*sps,\n        expected_dibits_per_carrier=112*frames,\n\
+      \        capture_status='planned; a manually interrupted capture may be shorter')\n\
+      \    Path(str(iq_path)+'.frames.json').write_text(json.dumps(record, indent=2)+'\\\
+      n')\n\n\ndef main():\n    ap = argparse.ArgumentParser(description=__doc__)\n\
+      \    ap.add_argument('--frames', type=int, default=704)\n    ap.add_argument('--seed',\
+      \ type=int, default=12345)\n    ap.add_argument('--sequence', type=int, default=0)\n\
+      \    ap.add_argument('--flags', type=int, default=0)\n    ap.add_argument('--output',\
+      \ type=Path, default=Path('framed_4cpfsk.dibits'))\n    args = ap.parse_args()\n\
+      \    info = random_information(args.frames, args.seed, args.sequence, args.flags)\n\
+      \    symbols = make_symbols(info)\n    args.output.parent.mkdir(parents=True,\
+      \ exist_ok=True)\n    symbols.tofile(args.output)\n    record = dict(**format_metadata(),\
+      \ frames=args.frames, seed=args.seed,\n                  start_sequence=args.sequence,\
+      \ flags=args.flags,\n                  first_information_bits=''.join(map(str,\
+      \ info[:104].tolist())),\n                  first_frame_dibits=symbols[:112].tolist())\n\
+      \    args.output.with_suffix('.frames.json').write_text(json.dumps(record, indent=2)+'\\\
+      n')\n    print(f'{args.frames} frames, {len(symbols)} dibits -> {args.output}')\n\
+      \n\nif __name__ == '__main__':\n    main()\n"
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [632, 12.0]
+    rotation: 0
+    state: enabled
+- name: rx_errors
+  id: snippet
+  parameters:
+    alias: ''
+    code: "self.resize(1100, 700)\ndef check_receiver():\n    error = self.acquisition.error\
+      \ or self.tokens.error or self.snac_decoder.error\n    ready = self.tokens.eos_sent\
+      \ and self.wav_sink.nitems_read(0) == self.capture['audio_samples']\n    if\
+      \ error is not None or ready:\n        self.stop()\n        self.wait()\n  \
+      \      result = rx_support.finish_receiver(self)\n        self.setWindowTitle('Receive\
+      \ complete: ' + self.wav_path if result['complete'] else 'Receive failed: '\
+      \ + str(error))\n        print(result, flush=True)\n        self._rx_timer.stop()\n\
+      self._rx_timer = Qt.QTimer(self)\nself._rx_timer.timeout.connect(check_receiver)\n\
+      self._rx_timer.start(100)"
+    comment: ''
+    priority: '0'
+    section: main_after_init
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [880, 308.0]
+    rotation: 0
+    state: enabled
+- name: rx_support
+  id: epy_module
+  parameters:
+    alias: ''
+    comment: ''
+    source_code: "\"\"\"Finite-file receiver parameters, Gaussian equalizer design\
+      \ and sync acquisition.\n\nNo transmitted payload, dibit file or RNG state is\
+      \ used for acquisition.\nThe first receiver intentionally assumes the transmitter\
+      \ sample clock and no CFO.\n\"\"\"\nimport json\nfrom pathlib import Path\n\
+      import numpy as np\n\n\ndef capture_info(iq_path):\n    meta = json.loads(Path(str(iq_path)+'.frames.json').read_text())\n\
+      \    if (meta.get('format') != 'snac-radio-experimental-v2' or meta.get('carriers')\
+      \ != 1\n            or meta.get('samples_per_symbol') != 32 or meta.get('h')\
+      \ != .25\n            or meta.get('bt') != .3 or meta.get('pulse_length') !=\
+      \ 4\n            or meta.get('sample_rate') != 42000):\n        raise ValueError('Receiver\
+      \ requires single-carrier v2, 42 kHz, SPS32, h=.25, BT=.3, L4')\n    samples\
+      \ = Path(iq_path).stat().st_size//8\n    if Path(iq_path).stat().st_size % 8\
+      \ or samples < meta['expected_iq_samples']:\n        raise ValueError('Incomplete\
+      \ complex64 IQ capture')\n    # Extra prefix/suffix samples are allowed for\
+      \ acquisition experiments.\n    audio_samples = meta['audio']['total_audio_samples']\n\
+      \    if audio_samples < 1 or (audio_samples+2047)//2048 != meta['frames']:\n\
+      \        raise ValueError('Inconsistent finite audio length')\n    return dict(iq_samples=samples,\
+      \ frames=meta['frames'], audio_samples=audio_samples,\n                start_sequence=meta['start_sequence'],\
+      \ context_frames=meta.get('context_frames', 2), validation_error='')\n\n\ndef\
+      \ preview_info(iq_path):\n    # GRC must remain editable before the first TX\
+      \ capture exists. The acquisition\n    # block rejects this placeholder at runtime,\
+      \ before processing any samples.\n    try:\n        return capture_info(iq_path)\n\
+      \    except (OSError, ValueError, KeyError, TypeError) as exc:\n        return\
+      \ dict(iq_samples=3712, frames=1, audio_samples=2048, start_sequence=0,\n  \
+      \                  context_frames=2, validation_error=f'Invalid IQ/metadata:\
+      \ {exc}')\n\n\ndef equalizer_taps():\n    \"\"\"9 symbol-spaced inverse FIR,\
+      \ implemented by stock FIR Filter in GRC.\n\n    Sampled Gaussian frequency\
+      \ pulse is a five-tap ISI channel. Least squares\n    approximates its inverse\
+      \ with a four-symbol delay. No received data is fitted.\n    \"\"\"\n    from\
+      \ gnuradio import analog, digital\n    pulse = np.asarray(digital.cpmmod_bc(analog.cpm.GAUSSIAN,\
+      \ .25, 32, 4, .3).taps())*32\n    channel = np.r_[pulse[::32], 0.0]\n    convolution\
+      \ = np.zeros((len(channel)+8, 9))\n    for i in range(9):\n        convolution[i:i+len(channel),\
+      \ i] = channel\n    target = np.zeros(len(convolution))\n    target[6] = 1\n\
+      \    inverse = np.linalg.lstsq(convolution, target, rcond=None)[0]\n    taps\
+      \ = np.zeros(257)\n    taps[::32] = inverse\n    return taps.tolist()\n\n\n\
+      def finish_receiver(tb):\n    \"\"\"Call after the graph has stopped; close\
+      \ WAV and report actual completion.\"\"\"\n    tb.wav_sink.close()\n    errors\
+      \ = [str(e) for e in (tb.acquisition.error, tb.tokens.error, tb.snac_decoder.error)\
+      \ if e is not None]\n    saved = int(tb.wav_sink.nitems_read(0))\n    complete\
+      \ = (not errors and tb.tokens.eos_sent and tb.snac_decoder.ended\n         \
+      \       and saved == tb.capture['audio_samples'])\n    record = dict(complete=complete,\
+      \ errors=errors, saved_audio_samples=saved,\n                  expected_audio_samples=tb.capture['audio_samples'],\n\
+      \                  accepted_frames=tb.tokens.frames, crc_failures=tb.tokens.crc_failures,\n\
+      \                  sync=tb.acquisition.status, audio_length_source='TX sidecar\
+      \ JSON, not an on-air field')\n    Path(tb.wav_path+'.rx.json').write_text(json.dumps(record,\
+      \ indent=2)+'\\n')\n    return record\n\n\ndef acquire(samples, frame_count):\n\
+      \    \"\"\"Try 32 sampling phases and exact sync matches at 112-symbol spacing.\n\
+      \n    All expected sync words must agree. Rank candidates by distance to the\
+      \ four\n    legal levels, then recover the data bits. CRC/FEC run in downstream\
+      \ blocks.\n    \"\"\"\n    sync = np.array([0, 3, 1, 0, 2, 1, 3, 2], dtype=np.uint8)\n\
+      \    level_to_dibit = np.array([0, 1, 3, 2], dtype=np.uint8)\n    best = None\n\
+      \    for phase in range(32):\n        values = np.asarray(samples[phase::32])\n\
+      \        indices = np.clip(np.floor((values+4)/2), 0, 3).astype(np.int32)\n\
+      \        dibits = level_to_dibit[indices]\n        if len(dibits) < frame_count*112:\n\
+      \            continue\n        windows = np.lib.stride_tricks.sliding_window_view(dibits,\
+      \ 8)\n        hits = np.flatnonzero(np.all(windows == sync, axis=1))\n     \
+      \   hit_set = set(hits.tolist())\n        for start in hits:\n            end\
+      \ = start+frame_count*112\n            if end > len(dibits) or not all(start+112*i\
+      \ in hit_set for i in range(frame_count)):\n                continue\n     \
+      \       error = float(np.mean((values[start:end]-(2*indices[start:end]-3))**2))\n\
+      \            if best is None or error < best[0]:\n                best = error,\
+      \ phase, int(start), dibits[start:end].copy()\n    if best is None:\n      \
+      \  raise ValueError('No complete sync chain: truncated capture, clock/CFO error\
+      \ or excessive noise')\n    error, phase, start, dibits = best\n    data = dibits.reshape(-1,\
+      \ 112)[:, 8:].reshape(-1)\n    bits = np.stack([data >> 1, data & 1], axis=1).reshape(-1).astype(np.uint8)\n\
+      \    return bits, dict(sampling_phase=phase, first_sync_symbol=start,\n    \
+      \                  first_sync_sample=start*32+phase, sync_frames=frame_count,\n\
+      \                      level_mse=error)\n"
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [512, 12.0]
+    rotation: 0
+    state: enabled
+- name: scale
+  id: blocks_multiply_const_vxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    const: '2'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    type: float
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [600, 436.0]
+    rotation: 0
+    state: enabled
+- name: snac_decoder
+  id: snac_decoder
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    context_frames: '2'
+    device: cpu
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    model: hubertsiuzdak/snac_24khz
+    verbose: 'False'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [560, 564.0]
+    rotation: 0
+    state: enabled
+- name: spectrum
+  id: qtgui_freq_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    average: '1.0'
+    axislabels: 'True'
+    bw: sample_rate
+    color1: '"blue"'
+    color10: '"dark blue"'
+    color2: '"red"'
+    color3: '"green"'
+    color4: '"black"'
+    color5: '"cyan"'
+    color6: '"magenta"'
+    color7: '"yellow"'
+    color8: '"dark red"'
+    color9: '"dark green"'
+    comment: ''
+    ctrlpanel: 'False'
+    fc: '0'
+    fftsize: '2048'
+    freqhalf: 'True'
+    grid: 'False'
+    gui_hint: 0,0,1,1
+    label: Relative Gain
+    label1: ''
+    label10: ''''''
+    label2: ''''''
+    label3: ''''''
+    label4: ''''''
+    label5: ''''''
+    label6: ''''''
+    label7: ''''''
+    label8: ''''''
+    label9: ''''''
+    legend: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: '''Received IQ'''
+    nconnections: '1'
+    norm_window: 'False'
+    showports: 'False'
+    tr_chan: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_FREE
+    tr_tag: '""'
+    type: complex
+    units: dB
+    update_time: '0.10'
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    wintype: window.WIN_BLACKMAN_hARRIS
+    ymax: '10'
+    ymin: '-140'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [104, 276.0]
+    rotation: 0
+    state: enabled
+- name: to_float
+  id: blocks_uchar_to_float
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [424, 440.0]
+    rotation: 0
+    state: enabled
+- name: tokens
+  id: epy_block
+  parameters:
+    _source_code: "\"\"\"CRC/sequence checking and inverse token packing; embedded\
+      \ in receiver GRC.\"\"\"\nimport json\nfrom pathlib import Path\nimport numpy\
+      \ as np\nimport pmt\nfrom gnuradio import gr\nfrom gnuradio.snac.messages import\
+      \ pack\nfrom gr_snac_core.frames import FRAME_MODE\n\n\nclass blk(gr.sync_block):\n\
+      \    def __init__(self, total_samples=2048, start_sequence=0, crc_fn=None, status_path=''):\n\
+      \        gr.sync_block.__init__(self, name='CRC / Sequence -> SNAC Tokens',\n\
+      \                               in_sig=[(np.uint8, 104)], out_sig=None)\n  \
+      \      self.total_samples = int(total_samples)\n        self.expected_frames\
+      \ = (self.total_samples+2047)//2048\n        self.start_sequence, self.crc_fn,\
+      \ self.status_path = start_sequence, crc_fn, status_path\n        self.frames\
+      \ = self.audio_samples = self.crc_failures = 0\n        self.error = None\n\
+      \        self.eos_sent = False\n        self.message_port_register_out(pmt.intern('codes'))\n\
+      \n    def _meta(self):\n        return dict(codec='snac', model='hubertsiuzdak/snac_24khz',\
+      \ sample_rate=24000,\n                    num_levels=3, chunk_index=self.frames,\
+      \ stream_mode=FRAME_MODE)\n\n    def _status(self):\n        if self.status_path:\n\
+      \            Path(self.status_path).write_text(json.dumps(dict(\n          \
+      \      accepted_frames=self.frames, expected_frames=self.expected_frames,\n\
+      \                audio_samples=self.audio_samples, crc_failures=self.crc_failures,\n\
+      \                eos_sent=self.eos_sent, error=str(self.error) if self.error\
+      \ else None,\n                note='Token-stage status; waveform completion\
+      \ requires decoder and WAV-length checks'), indent=2)+'\\n')\n\n    def work(self,\
+      \ input_items, output_items):\n        if self.error is not None or self.eos_sent:\n\
+      \            return -1\n        consumed = 0\n        try:\n            for\
+      \ bits in input_items[0]:\n                consumed += 1\n                if\
+      \ self.crc_fn(bits) != 0:\n                    self.crc_failures += 1\n    \
+      \                raise ValueError(f'CRC failure at frame {self.frames}; audio\
+      \ aborted (no concealment)')\n                sequence = int(np.dot(bits[84:90],\
+      \ 2**np.arange(5, -1, -1)))\n                if sequence != (self.start_sequence+self.frames)%64:\n\
+      \                    raise ValueError(f'Sequence discontinuity at frame {self.frames}')\n\
+      \                values = bits[:84].reshape(7, 12).dot(2**np.arange(11, -1,\
+      \ -1)).astype(np.uint16)\n                n = min(2048, self.total_samples-self.audio_samples)\n\
+      \                meta = self._meta()\n                meta.update(audio_samples=n,\
+      \ encoded_samples=2048, crop_start=0,\n                            chunk_duration_ms=n/24000*1000)\n\
+      \                self.message_port_pub(pmt.intern('codes'), pack(meta, [values[:1],\
+      \ values[1:3], values[3:]]))\n                self.frames += 1\n           \
+      \     self.audio_samples += n\n                if self.frames == self.expected_frames:\n\
+      \                    meta = self._meta()\n                    meta['eos'] =\
+      \ True\n                    self.message_port_pub(pmt.intern('codes'), pack(meta))\n\
+      \                    self.eos_sent = True\n                    self._status()\n\
+      \                    break\n        except Exception as exc:\n            self.error\
+      \ = exc\n            self._status()\n        return consumed\n\n    def stop(self):\n\
+      \        self._status()\n        return True\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    crc_fn: radio_frame.crc12
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    start_sequence: capture['start_sequence']
+    status_path: wav_path + '.frames.json'
+    total_samples: capture['audio_samples']
+  states:
+    _io_cache: ('CRC / Sequence -> SNAC Tokens', 'blk', [('total_samples', '2048'),
+      ('start_sequence', '0'), ('crc_fn', 'None'), ('status_path', "''")], [('0',
+      'byte', 104)], [('codes', 'message', 1)], '', ['crc_fn', 'start_sequence', 'status_path',
+      'total_samples'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [232, 564.0]
+    rotation: 0
+    state: enabled
+- name: vectors
+  id: blocks_stream_to_vector
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_items: '104'
+    type: byte
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [40, 592.0]
+    rotation: 0
+    state: enabled
+- name: wav_path
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: wav_path
+    short_id: ''
+    type: str
+    value: received_snac.wav
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [352, 12.0]
+    rotation: 0
+    state: enabled
+- name: wav_sink
+  id: blocks_wavfile_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    append: 'False'
+    bits_per_sample1: FORMAT_PCM_16
+    bits_per_sample2: FORMAT_PCM_16
+    bits_per_sample3: FORMAT_VORBIS
+    bits_per_sample4: FORMAT_PCM_16
+    comment: ''
+    file: wav_path
+    format: FORMAT_WAV
+    nchan: '1'
+    samp_rate: '24000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [880, 556.0]
+    rotation: 0
+    state: enabled
+- name: whitening
+  id: digital_additive_scrambler_bb
+  parameters:
+    affinity: ''
+    alias: ''
+    bits_per_byte: '1'
+    comment: ''
+    count: '208'
+    len: '8'
+    mask: '0x21'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    reset_tag_key: ''
+    seed: '0x1ff'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [32, 396.0]
+    rotation: 0
+    state: enabled
+
+connections:
+- [acquisition, '0', whitening, '0']
+- [deinterleave, '0', to_float, '0']
+- [demod, '0', drain_mux, '0']
+- [drain, '0', drain_mux, '1']
+- [drain_mux, '0', equalizer, '0']
+- [equalizer, '0', acquisition, '0']
+- [fec_decode, '0', vectors, '0']
+- [iq_source, '0', demod, '0']
+- [iq_source, '0', spectrum, '0']
+- [offset, '0', fec_decode, '0']
+- [scale, '0', offset, '0']
+- [snac_decoder, '0', wav_sink, '0']
+- [to_float, '0', scale, '0']
+- [tokens, codes, snac_decoder, codes]
+- [vectors, '0', tokens, '0']
+- [whitening, '0', deinterleave, '0']
+
+metadata:
+  file_format: 1
