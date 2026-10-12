@@ -6,6 +6,11 @@ Author: **7M4MON**
 
 Date: **2026-10-05**
 
+<img width="1112" height="452" alt="Image" src="https://github.com/user-attachments/assets/ec9445ca-3ec1-4d83-af7b-179f3f53282b" />  
+<img width="1209" height="933" alt="Image" src="https://github.com/user-attachments/assets/de563323-6855-47d7-8ae9-c00291b3f3e0" />  
+<img width="1141" height="665" alt="Image" src="https://github.com/user-attachments/assets/444401e2-a107-4514-9021-52e405e111cd" />  
+<img width="1600" height="869" alt="Image" src="https://github.com/user-attachments/assets/5c448947-ce11-4935-9556-02df70dcdafa" />  
+
 GNU Radio 3.10 用の Python OOT モジュールです。24 kHz mono float 音声を
 SNAC の3階層の token に変換し、PMT message 経由で復号します。
 ファイル保存では12-bit packingに対応します。Codec OOT本体とは別に、標準ブロックで
