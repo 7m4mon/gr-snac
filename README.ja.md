@@ -1,128 +1,44 @@
-# gr-snac 0.1
+# gr-snac
 
 [English](README.md) | 日本語
 
 Author: **7M4MON**
-
-Date: **2026-10-05**
 
 <img width="1112" height="452" alt="Image" src="https://github.com/user-attachments/assets/ec9445ca-3ec1-4d83-af7b-179f3f53282b" />  
 <img width="1209" height="933" alt="Image" src="https://github.com/user-attachments/assets/de563323-6855-47d7-8ae9-c00291b3f3e0" />  
 <img width="1141" height="665" alt="Image" src="https://github.com/user-attachments/assets/444401e2-a107-4514-9021-52e405e111cd" />  
 <img width="1600" height="869" alt="Image" src="https://github.com/user-attachments/assets/5c448947-ce11-4935-9556-02df70dcdafa" />  
 
-GNU Radio 3.10 用の Python OOT モジュールです。24 kHz mono float 音声を
-SNAC の3階層の token に変換し、PMT message 経由で復号します。
-ファイル保存では12-bit packingに対応します。Codec OOT本体とは別に、標準ブロックで
-構成したGaussian 4CPFSKのGRC波形評価例を追加しています。
-評価例ではランダム84 bitをCRC・FEC・同期語付き無線フレームへ組み立てます。
-2026-10-07に標準ブロックのフレーム内インターリーブとホワイトニングも追加しました。
-WAV→SNAC Encoder→無線フレーム→変調の接続版も追加しました。WAVは初期値で合計5回
-繰り返します。保存IQをWAVへ戻す有限ファイル受信機も追加しました。SDR送受信は未実装です。
+GNU Radio 3.10用のSNAC Encoder / Decoderと、狭帯域デジタル音声モデムの実験例です。
+24 kHz mono音声を3階層のtokenに変換し、12-bit packingで保存できます。
+モデム例はWAV → SNAC → CRC/FEC・インターリーブ・ホワイトニング → Gaussian 4CPFSK → IQ保存、
+および保存IQ → フレーム復号 → SNAC → WAV復元までを扱います。
+SDR送受信や実時間マイク入力は未実装です。
 
-[WAV→SNAC送信GRC](examples/narrowband_4cpfsk/wav_snac_4cpfsk.grc)は24 kHz mono PCMを入力し、
-標準Wav File SourceとHeadで回数を制限します。SNACが出す1/2/4 tokenを84 bitへ詰め、
-既存v2フレームへ接続します。約42 msの短い音源も含め、実モデルで5回・1回再生、
-最終部分フレーム、EOS、IQ保存まで確認しました。
-起動方法と出力仕様は[評価例README](examples/narrowband_4cpfsk/README.md)を参照してください。
+## モデム例の設計と結果
 
-[受信GRC](examples/narrowband_4cpfsk/receive_snac_4cpfsk.grc)は送信IQと`.frames.json`を読み、
-標準Quadrature Demod・FIR等化・ホワイトニング解除・デインターリーブ・tail-biting FEC復号を通し、
-CRC／Sequence確認後のtokenを既存SNAC Decoderへ渡します。24 kHz mono PCM16 WAVへ保存し、
-スピーカー出力はありません。独自処理は有限captureの同期捕捉とフレーム／token変換です。
-今回はCFO・クロック偏差なしのファイル接続で、音声長にはJSONを使います。
-連続した実RF受信や雑音下の受信性能評価は今後の段階です。
+| 項目 | 設定 |
+|---|---|
+| 音声単位 | 2048 samples / 24 kHz = 85.333 ms |
+| ペイロード | 1/2/4 token × 12 bit = 84 bit、984.375 bit/s |
+| 管理情報・CRC | Sequence 6 bit、Flags 2 bit、CRC-12/DECT 12 bit |
+| FEC | K=7、rate 1/2、tail-biting、polys=[109,79]、104 → 208 bit |
+| インターリーブ | 16×13、フレーム内 |
+| ホワイトニング | 9-bit LFSR、mask=0x21、seed=0x1FF、len=8、208 bitごとにリセット |
+| 同期語 | 8 dibits [0,3,1,0,2,1,3,2]、ホワイトニング対象外 |
+| 無線フレーム | 112 symbols、1312.5 symbols/s、同期込み2625 bit/s |
+| 変調 | Gaussian 4CPFSK、h=0.25、BT=0.30、L=4、SPS=32、Fs=42 kHz |
 
-## SNACを無線に載せるためのフレーム案と評価結果（2026-10-06）
+約43.1秒の音声を506フレームで送受信し、復号後bit / token誤り0、CRC失敗0、元と同じ音声長を確認しました。
+試験は周波数・クロック偏差なしの有限IQファイルで、音声長などの情報には付属JSONを使います。
+実RF、雑音下のBER/FER、フェージング、隣接干渉、連続受信は未評価です。
 
-SNACのtokenを12 bitで詰めると、2048音声サンプル（85.333… ms）ごとに
-1/2/4個、合計7個のtoken＝84 bitになります。定常ペイロード速度は
-984.375 bit/sです。この単位を1無線フレームのペイロードとして扱い、
-同期・誤り検出・誤り訂正の分を加えて必要な変調速度を求めました。
+乱数payloadのフレーム波形では、初期設定の99% OBWは1370.9 Hz、99.9% OBWは1837.1 Hzでした。
+2.5 kHz間隔のACPRは上下の悪い側で−46.62 dBです。帯域評価は実リンクの成立や規格適合を示しません。
 
-| 段階 | 内容 | 長さ |
-|---|---|---:|
-| Codec payload | 7 tokens × 12 bit | 84 bit |
-| 管理情報 | Sequence 6 bit / Flags 2 bit | 8 bit |
-| 誤り検出 | CRC-12/DECT | 12 bit |
-| FEC入力 | 上記の合計 | 104 bit |
-| FEC出力 | rate 1/2、K=7、tail-biting、追加終端ビットなし | 208 bit |
-| 4値変調 | 2 bit/symbol | 104 symbols |
-| 同期 | Mini Sync（実験用固定列0x349E） | 8 symbols |
-| 合計 | 85.333… msごとの無線フレーム | 112 symbols |
-
-したがって必要なシンボルレートは112 / (2048 / 24000) = **1312.5 sym/s**です。
-同期区間も2 bit/symbolとして数えた総伝送速度は2625 bit/s、FEC出力データ部分は
-2437.5 bit/sです。最初はこの収支に必要な速度で無構造ランダム波形を評価し、
-その後、CRC・FEC・同期語を実際に挿入するフレーム版GRCを追加しました。
-
-次に、この速度で2.5 kHz、可能なら2.0 kHzのチャネル間隔を狙えるかを調べるため、
-Gaussian-shaped 4CPFSKを選びました。周波数偏移をGaussianパルスで整形してから
-位相へ変換し、各キャリアの定包絡性を保ちます。最終IQへの帯域制限LPFは使いません。
-標準のCPMブロックが4値入力・Gaussianパルス・変調指数hに対応していたため、
-独自の変調OOTやEmbedded Pythonブロックは作らず、標準ブロックを組み合わせました。
-
-初期値はh=0.25、BT=0.30、パルス長L=4、32 samples/symbol、Fs=42000 Hzです。
-定常周波数は±164.0625 Hzと±492.1875 Hzを狙います。SNAC実データとの接続は
-後段に回し、まず同一seedの乱数データでh×BTの12条件を比較しました。
-単一キャリアのPSD・OBW・ACPRを測定し、別seedの3キャリアを加算するGRCも作成して、
-2.0 / 2.5 kHz間隔で起動・IQ保存を確認しました。
-
-GNU Radio 3.10.1.1 / Ubuntu 22.04 (WSL)、60秒のIQ、先頭0.1秒除外、
-8192点Blackman-Harris窓のWelch法による、最初の無構造ランダム版の結果は次のとおりです。
-
-| 指標 | 結果 |
-|---|---:|
-| 99% occupied bandwidth | 1379.6 Hz |
-| 99.9% occupied bandwidth | 1829.6 Hz |
-| 2.0 kHz間隔 ACPR（下側／上側） | -36.45 / -36.43 dB |
-| 2.5 kHz間隔 ACPR（下側／上側） | -46.63 / -46.60 dB |
-
-ACPRはチャネル間隔と同じ幅の矩形帯域を積分した隣接／主チャネル電力比です。
-初期値はスペクトル面では両方の間隔の候補となり、2.5 kHz間隔の方が隣接帯域への
-漏洩が少ない結果でした。ただし合否基準となるマスクは設定しておらず、
-BER、受信同期、周波数誤差、隣接局との電力差、実RFでの成立性は未評価です。
-hやBTを小さくして狭帯域化できても、受信性能が良くなるとは限りません。
-
-実フレーム化では、GNU Radio標準のtail-biting畳み込み符号を採用しました。
-K=7、rate 1/2、polys=[109,79]で、各104-bitブロックの末尾6 bitから初期状態を決め、
-追加終端ビットなしで208 coded bitsを出力します。通常の終端で6 bitを追加すると
-118 symbols/frame、1382.8125 sym/sが必要になるため、112 symbols/frameを
-維持できるtail-bitingを選びました。Sequenceは6 bit、Flagsは2 bit、CRCは
-payloadと管理情報の92 bitを保護するCRC-12/DECT、同期は固定8 dibits
-[0,3,1,0,2,1,3,2]です。同期語の捕捉性能は今後検証します。
-
-情報ビットとCRCの組立てだけをPythonで行い、FEC・dibit変換・同期挿入・CPMは
-標準ブロックを使っています。フレーム境界で位相・Gaussianフィルタ状態を維持し、
-収録終了時にだけフィルタの残りを出力します。送信機の独自FEC実装はありません。
-
-**フレーム付きv1（インターリーブ／ホワイトニング追加前）**の初期値（同じh=.25、BT=.30、seed=12345、704フレーム、
-末尾処理をPSDから除外）を測定した結果は次のとおりです。
-
-| 指標 | フレーム付き版 |
-|---|---:|
-| 99% occupied bandwidth | 1372.4 Hz |
-| 99.9% occupied bandwidth | 1835.5 Hz |
-| 2.0 kHz間隔 ACPR（下側／上側） | -36.26 / -36.42 dB |
-| 2.5 kHz間隔 ACPR（下側／上側） | -46.73 / -46.68 dB |
-
-今回の乱数payloadでは、フレーム化後も初期値の帯域・隣接帯域漏洩は同程度でした。
-CRC既知値、1-bit誤り検出、Sequence折返し、独立した参照計算とのFEC一致、
-112 symbolsごとの同期位置、GRCのdibit/IQ保存と末尾処理を確認しています。
-この送信波形評価はBERや実RFの無線リンク成立の検証ではありません。有限ファイル受信の検証は評価例READMEへ追記しています。
-
-2026-10-07のv2では、FEC出力208 bitを標準Matrix Interleaver（16行×13列）で
-並べ替え、標準Additive Scramblerでホワイトニングしてからdibitへ変換します。
-ホワイトニングは9-bit LFSR（GNU Radio mask=0x21、seed=0x1FF、len=8）を
-208 bitごとにリセットします。同期語は対象外で、112 symbols/frameは変わりません。
-逆処理で元のFEC出力に戻ることを確認しています。実用性能を最適化した設計ではなく、
-一通りの送信処理を持つ実験例です。v1とデータ部のbit列は互換ではありません。
-
-実行方法、測定定義、12条件の結果は
-[4CPFSK評価例のREADME](examples/narrowband_4cpfsk/README.md)を参照してください。
-フレーム付きGRCは[単一キャリア](examples/narrowband_4cpfsk/framed_4cpfsk.grc)と
-[3キャリア](examples/narrowband_4cpfsk/three_carriers_framed.grc)を用意しています。
-以前の無構造ランダム版も比較用に残しています。
+使い方・測定条件・検証コマンドは[モデム例のREADME](examples/narrowband_4cpfsk/README.md)を参照してください。
+音声ブロック単体は[snac_loopback.grc](examples/snac_loopback.grc)、
+モデムは[送信GRC](examples/narrowband_4cpfsk/wav_snac_4cpfsk.grc)と[受信GRC](examples/narrowband_4cpfsk/receive_snac_4cpfsk.grc)で試せます。
 
 ## Windowsでの利用（WSL 2）
 
@@ -255,8 +171,7 @@ Encoder/Decoderの **Context Frames (each side)** は **1または2、初期値2
 末尾の端数フレームはpaddingし、元の長さに切り詰めて復号します。
 未来側1/2フレームの待ち時間は各処理段で85.333/170.667 msです。
 入力蓄積、送信側と受信側の先読み、推論、通信を含む全体遅延とは異なります。
-旧 `chunk_ms` / `context_ms` パラメーターは廃止したためGRCコードを再生成してください。
-EncoderとDecoderを両方更新します。独立推論のCLI referenceは比較用として従来どおりです。
+独立推論のCLI referenceは比較用です。
 全ファイル一括推論と完全に同じ結果や、クリックの完全除去を保証するものではありません。
 
 ### 有限入力と終了
@@ -272,7 +187,7 @@ GNU Radioのstream EOFはmessageポートへ自動伝搬しないため、この
 停止コールバックからの送信には依存しません。文脈モードでは未出力のlook-ahead部分も手動停止時に破棄します。
 
 DecoderのFIFOが空なら0 samplesを返します。silenceは挿入しません。
-初期版は同期推論、FIFOは可変長で上限なし、message経路にはstreamのbackpressureが
+推論は同期処理、FIFOは可変長で上限なし、message経路にはstreamのbackpressureが
 ありません。長時間運転や実時間マイク入力は対象外です。
 推論処理は共通Codecクラスに分離してあり、後でworker化できます。
 不正message・推論エラーはログに記録し、`decoder.error` に保存して出力を終了します。
@@ -297,7 +212,7 @@ EOSでファイルを閉じて `encoded.snac.json` に測定結果を出しま�
 - `file_bytes` / `payload_bytes` / `overhead_bytes`: 実際のバイト数の内訳。
 
 これはWAVではなく、本プロジェクト独自の `.snac` コンテナです。
-v2はモデル情報、連続84-bit payload、末尾の総サンプル数を保存し、
+保存形式はモデル情報、連続84-bit payload、末尾の総サンプル数を保存し、
 フレームごとのヘッダーやbyte paddingは入れません。最終byteのみ0埋めします。
 元の音声なしで以下のように復号できます（同じSNACモデルの重みが必要）。
 
@@ -306,7 +221,6 @@ python tools/decode_snac_file.py examples/encoded.snac examples/from_tokens.wav 
 ```
 
 モデルの重み自体はファイルに含みません。文脈の重複送信はありません。
-旧v1ファイルも復号できます。v2には更新後のDecoder/ツールが必要です。
 GRCの定義を更新するにはインストール後にGRCを開き直してください。
 
 標準の `(metadata, uniform-vector)` PDUペアではなく、次のnative PMT dictionaryです。
@@ -327,11 +241,10 @@ GRCの定義を更新するにはインストール後にGRCを開き直して�
 ```
 
 各tokenは0..4095。PMT上では16-bitの入れ物で保持し、ファイル保存時に12-bit packingを行います。
-新形式は `stream_mode: "frames-v1"` を持ち、各階層のtoken数は1/2/4個です。
+フレームmessageは `stream_mode: "frames-v1"` を持ち、各階層のtoken数は1/2/4個です。
 `audio_samples` は通常2048、最後だけ1..2048です。Decoderがtoken履歴を組み立てます。
-stream_modeのない旧messageは従来の独立復号として受け付けます。
 `raw_bits = 12 * sum(token_counts)` は通信上の仮想的なpayload bit数です。
-PMTメモリ量、ヘッダ、将来のFEC等は含みません。
+PMTメモリ量、ヘッダー、FEC等は含みません。
 EOSは同じcodec/model/sample_rate/num_levelsと次のchunk_indexを持つmetadataに
 `eos: true` を加え、level配列は持ちません。
 Decoderはmodel一致、metadata、u16vector型、token範囲、モデルの階層長整合性を検証します。
@@ -350,26 +263,14 @@ GR_SNAC_MODEL_TESTS=1 python python/gnuradio/snac/qa_snac.py
 GR_SNAC_MODEL_TESTS=1 GR_SNAC_TEST_DEVICE=cuda python python/gnuradio/snac/qa_snac.py
 ```
 
-通常のQAはchunk処理、不正入力、WAV変換、末尾・EOS・FIFOを検証します。
-ブロック単体テストはGNU Radio/PMTとCodecのテストダブルを使います。
-実モデルQAはmodel load、100/200/500/1000 msのencode/decode、token範囲、
-有限な出力、復元長、および実際のstream→message→stream接続と自動終了を確認します。
-明示的に有効化しない場合は終了コード77でskipします。
-
-検証環境はWSL 2 / Ubuntu 22.04、GNU Radio 3.10.1.1、Python 3.10.12、
-PyTorch 2.14.1+cpu、SNAC 1.2.1、NumPy 1.26.4、SciPy 1.15.3です。
-WindowsとWSLの両方で8件の単体テストに成功しました。WSLではさらにCMakeインストール、
-実モデルCPU QA 2件、GRCによるコード生成とWAVループバック実行に成功しました。
-25,003サンプルのsynthetic audioを使い、24,000サンプルと末尾1,003サンプルの
-両chunkの復号と自動終了を確認しました。1秒chunkのtoken数は[12,24,48]、
-12 bit/token換算で1008 bit/sでした。著者による音声の聴感確認は実施済みです。
-連結境界の不連続音を実際に確認したことが、現行Encoder/Decoderに前後フレームの
-文脈を追加した理由です。CUDA動作は未確認です。
+単体テストは不正入力、WAV変換、フレーム処理、末尾、EOS、FIFOを確認します。
+実モデルQAはモデル読み込みとGNU Radio schedulerでの復号・出力長・有限終了を検証します。
+検証環境はWSL 2 / Ubuntu 22.04、GNU Radio 3.10.1.1、CPUです。CUDA動作は未確認です。
+音声文脈の比較は[frame_context](examples/frame_context/README.md)、
+現行token保存の結果は[frame_stream_check](examples/frame_stream_check/README.md)を参照してください。
 
 ## 参照
 
 - [SNAC upstream](https://github.com/hubertsiuzdak/snac)
 - [24 kHz model configuration](https://huggingface.co/hubertsiuzdak/snac_24khz/blob/main/config.json)
 - [GNU Radio 3.10](https://github.com/gnuradio/gnuradio/tree/maint-3.10)
-
-将来のToken PackerやUEPは、保持した3階層の後段に別ブロックとして追加する想定です。

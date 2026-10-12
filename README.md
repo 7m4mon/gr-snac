@@ -1,119 +1,45 @@
-# gr-snac 0.1
+# gr-snac
 
 English | [日本語](README.ja.md)
 
 Author: **7M4MON**
-
-Date: **2026-10-05**
 
 <img width="1112" height="452" alt="Image" src="https://github.com/user-attachments/assets/ec9445ca-3ec1-4d83-af7b-179f3f53282b" />
 <img width="1209" height="933" alt="Image" src="https://github.com/user-attachments/assets/de563323-6855-47d7-8ae9-c00291b3f3e0" />  
 <img width="1141" height="665" alt="Image" src="https://github.com/user-attachments/assets/444401e2-a107-4514-9021-52e405e111cd" />  
 <img width="1600" height="869" alt="Image" src="https://github.com/user-attachments/assets/5c448947-ce11-4935-9556-02df70dcdafa" />  
 
-Python out-of-tree (OOT) blocks for GNU Radio 3.10 that encode 24 kHz mono
-float audio into SNAC tokens and decode them back to audio. All three token
-levels remain separate in native PMT messages.
+SNAC encoder/decoder blocks for GNU Radio 3.10 and an experimental narrowband digital speech modem.
+The codec takes 24 kHz mono audio, preserves three token levels, and supports 12-bit packed token files.
+The modem examples connect WAV → SNAC → framing/FEC/interleaving/whitening → Gaussian 4CPFSK → IQ,
+and saved IQ → frame decoding → SNAC → WAV. SDR operation and live microphone input are not implemented.
 
-Version 0.1 includes encoder and decoder blocks, GNU Radio Companion (GRC)
-definitions, WAV loopback examples, standalone token measurements, and tests.
-A separate Gaussian 4CPFSK GRC experiment now builds CRC/FEC/sync radio frames
-from random 84-bit payloads and measures transmit waveforms using stock GNU Radio
-blocks. A WAV-to-SNAC transmitter and a finite-file IQ-to-WAV receiver are connected
-to this chain. SDR transmission/reception is not implemented.
-As of 2026-10-07, the framed v2 examples also use stock matrix interleaving and
-additive whitening between FEC encoding and dibit conversion.
+## Modem design and results
 
-The [WAV transmitter GRC](examples/narrowband_4cpfsk/wav_snac_4cpfsk.grc) uses the
-existing SNAC Encoder with a standard repeating WAV source and a sample-count
-Head. `repeat_count` defaults to **5 total plays**. Input must be nonempty 24 kHz
-mono integer-PCM WAV. Repetitions are concatenated before SNAC; only the final
-partial frame is padded. A message-only adapter packs the 1/2/4 tokens into 84
-payload bits and feeds the stock PDU-to-stream/FEC/interleaver/whitener/CPM chain.
-No speaker or SDR output is enabled. Real-model tests cover a 1001-sample WAV
-played once and five times, plus the bundled speech WAV played five times
-(506 radio frames, 1813632 IQ samples). See the
-[example README](examples/narrowband_4cpfsk/README.md) for launch commands and
-metadata needed to identify the valid audio length in the final padded frame.
+| Item | Setting |
+|---|---|
+| Speech frame | 2048 samples at 24 kHz, 85.333 ms |
+| Payload | 1/2/4 tokens × 12 bit = 84 bit, 984.375 bit/s |
+| Sequence / flags / CRC | 6 / 2 / 12 bit, CRC-12/DECT |
+| FEC | K=7, rate 1/2, tail-biting, polys=[109,79], 104 → 208 bit |
+| Interleaving / whitening | 16×13 matrix; nine-bit LFSR reset every coded frame |
+| Sync | 8 dibits, excluded from whitening |
+| Radio rate | 112 symbols/frame, 1312.5 symbols/s, 2625 bit/s including sync |
+| Modulation | Gaussian 4CPFSK, h=0.25, BT=0.30, L=4, SPS=32, Fs=42 kHz |
 
-The [receiver GRC](examples/narrowband_4cpfsk/receive_snac_4cpfsk.grc) reads the IQ
-and its `.frames.json` sidecar, uses stock quadrature demodulation, FIR equalization,
-dewhitening, deinterleaving and tail-biting FEC decoding, then checks CRC/sequence
-and sends recovered tokens to the existing SNAC Decoder. It saves 24 kHz mono
-PCM16 WAV without speaker playback. Custom code performs finite-capture sync
-acquisition and protocol/token conversion. This first receiver assumes no CFO or
-sample-clock mismatch and uses the sidecar for finite audio length; it is not a
-continuous over-the-air receiver. See the example README for tests and limitations.
+A 43.1-second speech test recovered 506 frames with no decoded-bit/token errors or CRC failures,
+preserving the exact audio length. This is finite-file IQ reception without frequency or clock mismatch;
+the receiver uses a JSON sidecar for frame counts and valid audio length.
+RF operation, noise BER/FER, fading, adjacent-channel interference and continuous reception are untested.
 
-## Radio frame proposal and waveform results (2026-10-06)
+At the default settings, framed random-payload waveforms measured 1370.9 Hz OBW99 and 1837.1 Hz OBW99.9.
+ACPR at 2.5 kHz spacing was −46.62 dB on the worse side. These spectral measurements do not establish
+radio-link performance or compliance with a channel mask.
 
-The proposed frame starts with 84 payload bits (seven 12-bit tokens) per
-2048 audio samples, or 85.333… ms at 24 kHz. Adding 8 sequence/flag bits and
-12 CRC bits gives 104 information bits. Assuming rate-1/2 FEC with no additional
-termination bits gives 208 coded bits, or 104 four-level symbols. Adding a
-provisional 8-symbol sync gives **112 symbols/frame and 1312.5 symbols/s**.
-The 2625 bit/s gross equivalent includes sync; the coded data portion is
-2437.5 bit/s. The initial unframed spectrum experiment has now been extended
-with actual CRC, FEC and sync insertion in separate framed flowgraphs.
-
-The experiment uses standard Map and Gaussian CPM blocks rather than a custom
-modulator. Defaults are h=0.25, BT=0.30, pulse length L=4, 32 samples/symbol and
-42 ksample/s. Seeded random symbols stand in for coded data. Twelve h/BT settings
-were measured with 60-second records on GNU Radio 3.10.1.1 / Ubuntu 22.04 (WSL).
-Both generated Qt applications were smoke-tested offscreen, including IQ capture
-for single-carrier and three-carrier configurations at 2.0 and 2.5 kHz spacing.
-
-| Initial unframed default-setting measurement | Result |
-|---|---:|
-| 99% occupied bandwidth | 1379.6 Hz |
-| 99.9% occupied bandwidth | 1829.6 Hz |
-| ACPR at 2.0 kHz spacing, lower / upper | -36.45 / -36.43 dB |
-| ACPR at 2.5 kHz spacing, lower / upper | -46.63 / -46.60 dB |
-
-ACPR uses rectangular integration bands as wide as the channel spacing. These
-results identify spectral candidates, not validated radio links: no pass/fail
-mask, BER, acquisition, frequency-error or RF tests have been applied. Actual
-framing can change the spectrum and required symbol rate. Six additional
-convolutional-code termination bits would require 118 symbols/frame, or
-1382.8125 symbols/s; the implementation instead uses tail-biting to preserve
-112 symbols/frame. The provisional sync length still needs receiver testing.
-
-The implemented format is payload[84], sequence[6], flags[2], CRC-12/DECT[12],
-MSB first with no byte padding. CRC covers the preceding 92 bits. Stock GNU Radio
-K=7, rate-1/2 CC encoding uses polys=[109,79], CC_TAILBITING and no padding.
-Repack Bits converts 208 coded bits to 104 dibits; Stream Mux prepends the eight
-sync dibits [0,3,1,0,2,1,3,2] (0x349E). Python only assembles the information bits
-and bitwise CRC. CPM state is continuous across frames. A one-time zero-level
-drain at the end of the finite capture preserves the final Gaussian pulse tail.
-
-For 704 framed random-payload frames at h=.25, BT=.30, seed=12345:
-
-| Framed v1 measurement (before interleaving/whitening) | Result |
-|---|---:|
-| 99% occupied bandwidth | 1372.4 Hz |
-| 99.9% occupied bandwidth | 1835.5 Hz |
-| ACPR at 2.0 kHz spacing, lower / upper | -36.26 / -36.42 dB |
-| ACPR at 2.5 kHz spacing, lower / upper | -46.73 / -46.68 dB |
-
-Validation covers CRC check/residue, single-bit error detection, sequence wrap,
-stock FEC against an independent test oracle, sync positions, and generated GRC
-dibit/IQ captures including the final drain. These transmit-spectrum tests do not
-establish BER/acquisition performance; finite-file receiver tests are documented separately.
-
-Version 2 adds a stock 16-row by 13-column Matrix Interleaver and Additive
-Scrambler (mask=0x21, seed=0x1FF, GNU Radio len=8, one bit per byte, count=208).
-The nine-bit LFSR resets at each coded frame; sync is excluded. The frame stays
-112 symbols long. Inverse whitening and deinterleaving recover the exact FEC
-output, including across frame boundaries. These are experimental settings,
-not receiver-performance optimization. The data bits are not wire-compatible
-with v1; metadata identifies v2 but no on-air version field was added.
-
-See the [Japanese design narrative](README.ja.md) and the
-[experiment README](examples/narrowband_4cpfsk/README.md) for measurement
-definitions, all twelve results and reproduction commands. Open the
-[framed single-carrier GRC](examples/narrowband_4cpfsk/framed_4cpfsk.grc) or
-[framed three-carrier GRC](examples/narrowband_4cpfsk/three_carriers_framed.grc) to run
-the new experiment. The original unframed examples remain available for comparison.
+See the [modem README](examples/narrowband_4cpfsk/README.md) for commands, measurement definitions and limitations.
+Use [snac_loopback.grc](examples/snac_loopback.grc) for codec-only processing, or the
+[WAV transmitter](examples/narrowband_4cpfsk/wav_snac_4cpfsk.grc) and
+[IQ receiver](examples/narrowband_4cpfsk/receive_snac_4cpfsk.grc) for the modem experiment.
 
 ## Installation on Linux
 
@@ -246,9 +172,7 @@ the decoder retains received tokens. Only the new frame's 1/2/4 tokens are sent:
 No context is retransmitted. A partial final frame is padded and cropped to the
 original length. Future context adds 85.333/170.667 ms at each processing stage,
 in addition to frame accumulation, computation and transport latency.
-Old `chunk_ms` and `context_ms` block parameters are removed: regenerate old
-GRC Python code and update both blocks. Zero/one-sided context is not supported.
-The standalone reference CLI still uses independent chunks for comparison.
+Zero/one-sided context is not supported. The standalone reference CLI uses independent chunks for comparison.
 Context does not guarantee whole-file equivalence for all audio.
 Low-latency performance and perceptual quality have not been evaluated.
 
@@ -267,7 +191,7 @@ Publishing messages during stop is not required.
 An empty decoder FIFO returns zero samples without inserting silence.
 Inference is synchronous, the FIFO is unbounded, and the message path has no
 stream backpressure. Long-running operation and live microphone use are outside
-the initial scope. A shared `Codec` class separates inference for future worker
+the supported scope. A shared `Codec` class separates inference for future worker
 threads. Invalid messages and inference failures are logged, stored in
 `decoder.error`, and terminate output. Missing/reordered frames also terminate;
 radio pacing and packet-loss concealment are not implemented.
@@ -278,7 +202,7 @@ does not require a Throttle block.
 
 ## PMT message format
 
-The loopback now connects Encoder → **SNAC Token File (12-bit)** → Decoder.
+The loopback connects Encoder → **SNAC Token File (12-bit)** → Decoder.
 Set `token_path` (default `encoded.snac`) to save the intermediate tokens,
 packed continuously into 12 bits each, with model/length metadata in a custom gr-snac
 container. The file is overwritten on each run. At EOS, `encoded.snac.json`
@@ -289,9 +213,7 @@ original audio duration). Manual stop marks the recording incomplete.
 Decode without the input WAV using
 `python tools/decode_snac_file.py examples/encoded.snac examples/from_tokens.wav --context-frames 2`.
 The same model weights must be available separately; they are not in the file.
-The v2 container has no per-frame headers or byte padding; only the last byte
-is padded. Its footer stores the original sample count. Legacy v1 files remain
-readable; v2 needs the updated tools. Neither context setting duplicates tokens.
+The token container packs payload continuously with no per-frame headers or byte padding; only the last byte is padded. Its footer stores the original sample count. Neither context setting duplicates tokens.
 
 Connect the `codes` message ports directly. Messages are native PMT dictionaries,
 rather than conventional `(metadata, uniform-vector)` PDU pairs. Message Debug
@@ -313,8 +235,7 @@ can inspect them:
 
 Frame messages contain exactly 1/2/4 tokens and `audio_samples=2048` (except the
 last partial frame). The decoder constructs overlapping windows from its local
-token history. Messages without `stream_mode` retain legacy decoding behavior.
-In continuous mode, output waits for the right context; manual shutdown discards
+token history. In continuous mode, output waits for the right context; manual shutdown discards
 any pending output and look-ahead. Exact `total_samples` flushes all remaining audio.
 
 Tokens are integers from 0 to 4095, stored in 16-bit PMT vectors and packed into
@@ -327,8 +248,7 @@ index, and `eos: true`, without level vectors. The decoder validates metadata,
 model identity, u16vector types, token ranges, and hierarchy lengths.
 
 Set `verbose=True` to log token counts, effective bitrate, inference time, and
-device per chunk. The encoder also reports clipping. Future Token Packer and
-unequal error protection (UEP) blocks can use the preserved levels.
+device per chunk. The encoder also reports clipping.
 
 ## Tests and validation
 
@@ -342,26 +262,11 @@ GR_SNAC_MODEL_TESTS=1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 \
 GR_SNAC_MODEL_TESTS=1 GR_SNAC_TEST_DEVICE=cuda python python/gnuradio/snac/qa_snac.py
 ```
 
-Unit tests cover buffering, invalid inputs, WAV conversion, partial tails, EOS,
-and FIFO output. Block unit tests use GNU Radio/PMT and codec test doubles.
-Real-model QA checks model loading, 100/200/500/1000 ms encode/decode, token
-ranges, finite output, duration, and actual stream-to-message-to-stream
-scheduling and termination. Without opt-in, it exits with skip code 77.
-
-Validated on WSL 2 / Ubuntu 22.04 with GNU Radio 3.10.1.1, Python 3.10.12,
-PyTorch 2.14.1+cpu, SNAC 1.2.1, NumPy 1.26.4, and SciPy 1.15.3:
-
-- Eight unit tests passed on Windows and WSL.
-- CMake installation and two CPU real-model QA tests passed on WSL.
-- GRC generated and ran the WAV loopback successfully.
-- A 25,003-sample synthetic input retained its 24,000-sample chunk and
-  1,003-sample tail, with automatic termination and the same output length.
-- The one-second chunk produced [12, 24, 48] tokens, equivalent to 1008 bit/s
-  at 12 bits/token.
-
-Listening tests were performed by the author. Audible discontinuities at the
-joins motivated the addition of past and future frame context to the current
-encoder and decoder. CUDA operation remains unverified.
+Unit tests cover invalid inputs, WAV conversion, frame processing, partial tails, EOS and FIFO output.
+Real-model QA checks loading, reconstruction, output length and termination under the GNU Radio scheduler.
+Validation used CPU on GNU Radio 3.10.1.1 / Ubuntu 22.04 under WSL 2. CUDA operation remains unverified.
+See [frame_context](examples/frame_context/README.md) for context comparisons and
+[frame_stream_check](examples/frame_stream_check/README.md) for current token-file measurements.
 
 ## References
 
