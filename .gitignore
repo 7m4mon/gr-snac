@@ -5,6 +5,7 @@ build-wsl/
 build-wsl-context/
 .venv/
 *.wav
+!examples/frame_context/*.wav
 *.snac
 handoff/
 *Zone.Identifier
